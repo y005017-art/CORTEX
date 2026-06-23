@@ -44,7 +44,4 @@ class DecisionsRepository:
     def approve(self, decision: Decision, approver: str) -> Decision:
         decision.status = "approved"
         decision.approved_by = approver
-        self.db.add(decision)
-        self.db.commit()
-        self.db.refresh(decision)
         return decision

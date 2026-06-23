@@ -318,3 +318,53 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Decision flow is application-level but still not connected to CoWork orchestration or memory promotion
 - Next recommended step:
   - Introduce the first CoWork orchestration path and connect approved decisions to controlled memory, or add backend ownership/authorization rules before expanding collaboration behavior
+
+## Session Entry
+
+- Date: 2026-06-23
+- Session focus: Memory model and automatic promotion from approved decisions
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added memory domain model and migration
+  - Added project memory listing route
+  - Added backend memory repository and service
+  - Connected decision approval flow to automatic verified memory promotion
+  - Linked approved decisions to promoted memory records
+  - Added frontend memory panel to the workspace
+  - Verified approved decision -> memory promotion through API and UI
+- In progress:
+  - Foundation now has a first persistent memory path tied to actual decision approval
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Promote approved decisions into `verified` memory automatically
+  - Keep promotion content simple and deterministic for now using decision title plus summary
+  - Expose memory read-only first before allowing manual memory creation or editing
+- Files created:
+  - `apps/api/app/repositories/memories.py`
+  - `apps/api/app/services/memories.py`
+  - `apps/api/app/api/routes/memories.py`
+  - `apps/api/alembic/versions/20260623_03_memories_and_decision_link.py`
+- Files updated:
+  - `apps/api/app/models.py`
+  - `apps/api/app/repositories/decisions.py`
+  - `apps/api/app/services/decisions.py`
+  - `apps/api/app/dependencies.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/main.py`
+  - `apps/api/README.md`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/workspace-client.tsx`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `python -m compileall app`
+  - `python -m alembic upgrade head`
+  - `npm run build`
+  - API validation of register/login + project/thread/decision + approve + memories list
+  - Browser validation of memory panel rendering promoted memory
+- Known risks:
+  - Memory promotion currently creates a simple text snapshot, not a richer structured memory payload
+  - No memory ACL or status transition workflow beyond automatic verified creation exists yet
+  - Decision approval does not yet trigger downstream orchestration or summaries
+- Next recommended step:
+  - Add memory status transitions and ACL rules, or begin the first CoWork orchestration path using project/thread/message context and verified memory retrieval

@@ -64,6 +64,10 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan"
     )
+    memories: Mapped[list["Memory"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan"
+    )
 
 
 class Thread(Base):
@@ -121,10 +125,31 @@ class Decision(Base):
     status: Mapped[str] = mapped_column(String(32), default="proposed")
     proposed_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
     approved_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    linked_memory_id: Mapped[str | None] = mapped_column(ForeignKey("memories.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
 
     project: Mapped[Project] = relationship(back_populates="decisions")
     thread: Mapped[Thread | None] = relationship(back_populates="decisions")
+    linked_memory: Mapped["Memory | None"] = relationship(foreign_keys=[linked_memory_id])
+
+
+class Memory(Base):
+    __tablename__ = "memories"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), nullable=False, index=True)
+    memory_type: Mapped[str] = mapped_column(String(32), default="decision")
+    status: Mapped[str] = mapped_column(String(32), default="verified")
+    visibility: Mapped[str] = mapped_column(String(32), default="project")
+    content: Mapped[str] = mapped_column(Text(), nullable=False)
+    source_role_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    source_message_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    source_decision_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
+
+    project: Mapped[Project] = relationship(back_populates="memories")
 
 
 class Message(Base):

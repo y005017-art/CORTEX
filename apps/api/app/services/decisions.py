@@ -3,13 +3,16 @@ from sqlalchemy.orm import Session
 
 from app.models import Decision
 from app.repositories.decisions import DecisionsRepository
+from app.repositories.memories import MemoriesRepository
 from app.repositories.projects import ProjectsRepository
 from app.repositories.threads import ThreadsRepository
 
 
 class DecisionService:
     def __init__(self, db: Session):
+        self.db = db
         self.decisions = DecisionsRepository(db)
+        self.memories = MemoriesRepository(db)
         self.projects = ProjectsRepository(db)
         self.threads = ThreadsRepository(db)
 
@@ -47,4 +50,24 @@ class DecisionService:
         decision = self.decisions.get(decision_id)
         if decision is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Decision not found")
-        return self.decisions.approve(decision, approver)
+        self.decisions.approve(decision, approver)
+
+        if decision.linked_memory_id is None:
+            promoted_memory = self.memories.create(
+                project_id=decision.project_id,
+                memory_type="decision",
+                status="verified",
+                visibility="project",
+                content=f"{decision.title}\n\n{decision.summary}",
+                source_role_id=decision.proposed_by,
+                source_message_id=None,
+                source_decision_id=decision.id,
+                approved_by=approver,
+            )
+            decision.linked_memory = promoted_memory
+            decision.linked_memory_id = promoted_memory.id
+
+        self.db.add(decision)
+        self.db.commit()
+        self.db.refresh(decision)
+        return decision

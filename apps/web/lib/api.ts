@@ -94,6 +94,21 @@ export type Decision = {
   created_at: string;
 };
 
+export type Memory = {
+  id: string;
+  project_id: string;
+  memory_type: string;
+  status: string;
+  visibility: string;
+  content: string;
+  source_role_id: string | null;
+  source_message_id: string | null;
+  source_decision_id: string | null;
+  approved_by: string | null;
+  locked_at: string | null;
+  created_at: string;
+};
+
 export type AuthSession = {
   token: string;
   user: AuthUser;
@@ -201,4 +216,8 @@ export async function approveDecision(decisionId: string): Promise<Decision> {
   return request<Decision>(`/decisions/${decisionId}/approve`, {
     method: "POST",
   });
+}
+
+export async function listMemories(projectId: string): Promise<Memory[]> {
+  return request<Memory[]>(`/projects/${projectId}/memories`);
 }

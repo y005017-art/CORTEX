@@ -111,6 +111,7 @@ class DecisionRead(BaseModel):
     status: str
     proposed_by: str | None
     approved_by: str | None
+    linked_memory_id: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -120,6 +121,24 @@ class DecisionApproveResponse(BaseModel):
     id: str
     status: str
     approved_by: str | None
+    linked_memory_id: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class MemoryRead(BaseModel):
+    id: str
+    project_id: str
+    memory_type: str
+    status: str
+    visibility: str
+    content: str
+    source_role_id: str | None
+    source_message_id: str | None
+    source_decision_id: str | None
+    approved_by: str | None
+    locked_at: datetime | None
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 

@@ -8,9 +8,11 @@ import {
   createDecision,
   createThread,
   Decision,
+  listMemories,
   listDecisions,
   listRoles,
   listRules,
+  Memory,
   listMessages,
   listThreads,
   Message,
@@ -30,6 +32,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
+  const [memories, setMemories] = useState<Memory[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [rules, setRules] = useState<ConstitutionRule[]>([]);
   const [threadTitle, setThreadTitle] = useState("");
@@ -86,9 +89,11 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         listRoles(),
         listRules(),
       ]);
+      const memoryData = await listMemories(project.id);
       setDecisions(decisionData);
       setRoles(roleData);
       setRules(ruleData);
+      setMemories(memoryData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load workspace panels.");
     } finally {
@@ -399,6 +404,30 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                     <span>{rule.enforcement_action}</span>
                   </div>
                   <p>{rule.description}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="stack-gap">
+            <div className="panel-header">
+              <h2>Memory</h2>
+              <span>{memories.length} items</span>
+            </div>
+            <div className="stack-gap">
+              {loadingPanels ? <p className="empty-state">Loading memory...</p> : null}
+              {memories.map((memory) => (
+                <article className="message-card" key={memory.id}>
+                  <div className="message-meta">
+                    <strong>{memory.memory_type}</strong>
+                    <span>{memory.status}</span>
+                  </div>
+                  <p>{memory.content}</p>
+                  <span className="mini-meta">
+                    {memory.approved_by
+                      ? `Approved by ${memory.approved_by}`
+                      : "Awaiting approval metadata"}
+                  </span>
                 </article>
               ))}
             </div>

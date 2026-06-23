@@ -15,6 +15,7 @@ uvicorn app.main:app --reload --port 8000
 - Alembic migration tooling baseline
 - local auth routes plus token-backed session flow
 - repository/service layering for workspace and decision operations
+- memory model with approved decision promotion into verified project memory
 
 ## Database
 
@@ -47,3 +48,9 @@ Authenticated routes expect:
 ```text
 Authorization: Bearer <token>
 ```
+
+## Memory routes
+
+- `GET /projects/{project_id}/memories`
+
+Approved decisions are promoted automatically into verified memory.

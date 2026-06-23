@@ -7,6 +7,7 @@ from app.bootstrap import seed_foundation_data
 from app.api.routes.auth import router as auth_router
 from app.api.routes.constitution import router as constitution_router
 from app.api.routes.decisions import router as decisions_router
+from app.api.routes.memories import router as memories_router
 from app.api.routes.messages import router as messages_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.roles import router as roles_router
@@ -45,6 +46,7 @@ app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(threads_router)
 app.include_router(messages_router)
+app.include_router(memories_router)
 app.include_router(roles_router)
 app.include_router(constitution_router)
 app.include_router(decisions_router)
@@ -67,6 +69,7 @@ def root() -> dict[str, object]:
             "/projects/{project_id}/threads",
             "/threads/{thread_id}",
             "/threads/{thread_id}/messages",
+            "/projects/{project_id}/memories",
             "/auth/register",
             "/auth/login",
             "/auth/me",
