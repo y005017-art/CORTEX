@@ -3,13 +3,21 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  approveDecision,
   createMessage,
+  createDecision,
   createThread,
+  Decision,
+  listDecisions,
+  listRoles,
+  listRules,
   listMessages,
   listThreads,
   Message,
   Project,
+  Role,
   Thread,
+  ConstitutionRule,
 } from "@/lib/api";
 
 
@@ -21,12 +29,19 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   const [threads, setThreads] = useState<Thread[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [decisions, setDecisions] = useState<Decision[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [rules, setRules] = useState<ConstitutionRule[]>([]);
   const [threadTitle, setThreadTitle] = useState("");
   const [messageDraft, setMessageDraft] = useState("");
+  const [decisionTitle, setDecisionTitle] = useState("");
+  const [decisionSummary, setDecisionSummary] = useState("");
   const [loadingThreads, setLoadingThreads] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [loadingPanels, setLoadingPanels] = useState(true);
   const [submittingThread, setSubmittingThread] = useState(false);
   const [submittingMessage, setSubmittingMessage] = useState(false);
+  const [submittingDecision, setSubmittingDecision] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedThread = useMemo(
@@ -63,8 +78,30 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
     }
   }
 
+  async function refreshPanels() {
+    setLoadingPanels(true);
+    try {
+      const [decisionData, roleData, ruleData] = await Promise.all([
+        listDecisions(project.id),
+        listRoles(),
+        listRules(),
+      ]);
+      setDecisions(decisionData);
+      setRoles(roleData);
+      setRules(ruleData);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load workspace panels.");
+    } finally {
+      setLoadingPanels(false);
+    }
+  }
+
   useEffect(() => {
     void refreshThreads();
+  }, [project.id]);
+
+  useEffect(() => {
+    void refreshPanels();
   }, [project.id]);
 
   useEffect(() => {
@@ -125,6 +162,41 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
     }
   }
 
+  async function handleCreateDecision(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!decisionTitle.trim() || !decisionSummary.trim()) {
+      setError("Decision title and summary are required.");
+      return;
+    }
+
+    try {
+      setSubmittingDecision(true);
+      setError(null);
+      await createDecision(project.id, {
+        thread_id: selectedThreadId ?? undefined,
+        title: decisionTitle.trim(),
+        summary: decisionSummary.trim(),
+      });
+      setDecisionTitle("");
+      setDecisionSummary("");
+      await refreshPanels();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create decision.");
+    } finally {
+      setSubmittingDecision(false);
+    }
+  }
+
+  async function handleApproveDecision(decisionId: string) {
+    try {
+      setError(null);
+      await approveDecision(decisionId);
+      await refreshPanels();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to approve decision.");
+    }
+  }
+
   return (
     <main className="workspace-shell">
       <section className="workspace-header">
@@ -137,7 +209,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         </div>
       </section>
 
-      <section className="workspace-grid">
+      <section className="workspace-grid workspace-grid-wide">
         <aside className="panel sidebar stack-gap">
           <div className="panel-header">
             <h2>Threads</h2>
@@ -231,6 +303,107 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
             </button>
           </form>
         </section>
+
+        <aside className="panel detail-sidebar stack-gap">
+          <section className="stack-gap">
+            <div className="panel-header">
+              <h2>Decisions</h2>
+              <span>{decisions.length} total</span>
+            </div>
+
+            <form className="compact-form" onSubmit={handleCreateDecision}>
+              <label className="field">
+                <span>Decision title</span>
+                <input
+                  onChange={(event) => setDecisionTitle(event.target.value)}
+                  placeholder="Foundation next step"
+                  value={decisionTitle}
+                />
+              </label>
+
+              <label className="field">
+                <span>Summary</span>
+                <textarea
+                  onChange={(event) => setDecisionSummary(event.target.value)}
+                  placeholder="Describe the decision clearly"
+                  rows={4}
+                  value={decisionSummary}
+                />
+              </label>
+
+              <button className="secondary-button" disabled={submittingDecision} type="submit">
+                {submittingDecision ? "Creating..." : "Create Decision"}
+              </button>
+            </form>
+
+            <div className="stack-gap">
+              {loadingPanels ? <p className="empty-state">Loading decisions...</p> : null}
+              {decisions.map((decision) => (
+                <article className="message-card" key={decision.id}>
+                  <div className="message-meta">
+                    <strong>{decision.title}</strong>
+                    <span>{decision.status}</span>
+                  </div>
+                  <p>{decision.summary}</p>
+                  <div className="inline-actions">
+                    <span className="mini-meta">
+                      {decision.approved_by
+                        ? `Approved by ${decision.approved_by}`
+                        : `Proposed by ${decision.proposed_by ?? "unknown"}`}
+                    </span>
+                    {decision.status !== "approved" ? (
+                      <button
+                        className="text-button"
+                        onClick={() => void handleApproveDecision(decision.id)}
+                        type="button"
+                      >
+                        Approve
+                      </button>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="stack-gap">
+            <div className="panel-header">
+              <h2>Roles</h2>
+              <span>{roles.length} total</span>
+            </div>
+            <div className="stack-gap">
+              {loadingPanels ? <p className="empty-state">Loading roles...</p> : null}
+              {roles.map((role) => (
+                <article className="message-card" key={role.id}>
+                  <div className="message-meta">
+                    <strong>{role.name}</strong>
+                    <span>{role.role_type}</span>
+                  </div>
+                  <p>{role.description ?? "No description."}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="stack-gap">
+            <div className="panel-header">
+              <h2>Constitution</h2>
+              <span>{rules.length} rules</span>
+            </div>
+            <div className="stack-gap">
+              {loadingPanels ? <p className="empty-state">Loading rules...</p> : null}
+              {rules.map((rule) => (
+                <article className="message-card" key={rule.id}>
+                  <div className="message-meta">
+                    <strong>{rule.rule_code}</strong>
+                    <span>{rule.enforcement_action}</span>
+                  </div>
+                  <p>{rule.description}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        </aside>
       </section>
     </main>
   );

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.bootstrap import seed_foundation_data
+from app.api.routes.auth import router as auth_router
 from app.api.routes.constitution import router as constitution_router
 from app.api.routes.decisions import router as decisions_router
 from app.api.routes.messages import router as messages_router
@@ -40,6 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(auth_router)
 app.include_router(projects_router)
 app.include_router(threads_router)
 app.include_router(messages_router)
@@ -65,9 +67,13 @@ def root() -> dict[str, object]:
             "/projects/{project_id}/threads",
             "/threads/{thread_id}",
             "/threads/{thread_id}/messages",
+            "/auth/register",
+            "/auth/login",
+            "/auth/me",
             "/roles",
             "/constitution/rules",
             "/constitution/evaluate",
             "/projects/{project_id}/decisions",
+            "/decisions/{decision_id}/approve",
         ],
     }

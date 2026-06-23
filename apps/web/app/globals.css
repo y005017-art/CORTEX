@@ -79,8 +79,13 @@ body {
   gap: 20px;
 }
 
+.workspace-grid-wide {
+  grid-template-columns: 280px minmax(0, 1fr) 320px;
+}
+
 .sidebar,
-.conversation {
+.conversation,
+.detail-sidebar {
   min-height: 640px;
 }
 
@@ -226,10 +231,36 @@ body {
   color: #f7a6a6;
 }
 
+.compact-summary {
+  margin: 0;
+}
+
 .composer,
 .compact-form {
   display: grid;
   gap: 16px;
+}
+
+.inline-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.mini-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.text-button {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
 }
 
 .back-link-row {
@@ -271,6 +302,10 @@ body {
 
   .dashboard-grid,
   .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-grid-wide {
     grid-template-columns: 1fr;
   }
 }

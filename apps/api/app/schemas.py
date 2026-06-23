@@ -114,3 +114,36 @@ class DecisionRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class DecisionApproveResponse(BaseModel):
+    id: str
+    status: str
+    approved_by: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class UserRegister(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    display_name: str = Field(min_length=1, max_length=120)
+    password: str = Field(min_length=8, max_length=255)
+
+
+class UserLogin(BaseModel):
+    email: str = Field(min_length=3, max_length=255)
+    password: str = Field(min_length=8, max_length=255)
+
+
+class UserRead(BaseModel):
+    id: str
+    email: str
+    display_name: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AuthSession(BaseModel):
+    token: str
+    user: UserRead

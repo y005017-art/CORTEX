@@ -13,6 +13,8 @@ uvicorn app.main:app --reload --port 8000
 - database schema v1 for `projects`, `threads`, and `messages`
 - API skeleton for project, thread, message, role, constitution, and decision flows
 - Alembic migration tooling baseline
+- local auth routes plus token-backed session flow
+- repository/service layering for workspace and decision operations
 
 ## Database
 
@@ -32,4 +34,16 @@ Initialize the local database with:
 
 ```bash
 alembic upgrade head
+```
+
+## Auth routes
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /auth/me`
+
+Authenticated routes expect:
+
+```text
+Authorization: Bearer <token>
 ```

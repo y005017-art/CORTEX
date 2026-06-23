@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { listProjects, Project } from "@/lib/api";
+import { getStoredToken } from "@/lib/auth";
 import { WorkspaceClient } from "@/components/workspace-client";
 
 
@@ -17,6 +18,12 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
 
   useEffect(() => {
     async function loadProject() {
+      if (!getStoredToken()) {
+        setError("Sign in from the dashboard before opening a workspace.");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         const projects = await listProjects();

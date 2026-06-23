@@ -1,11 +1,9 @@
 from fastapi import APIRouter, Depends, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 
-from app.db import get_db
-from app.dependencies import get_project_or_404, get_thread_or_404
-from app.models import Project, Thread
+from app.dependencies import get_current_user, get_workspace_service
+from app.models import Thread, User
 from app.schemas import ThreadCreate, ThreadRead
+from app.services.workspace import WorkspaceService
 
 
 router = APIRouter(tags=["threads"])
@@ -13,11 +11,11 @@ router = APIRouter(tags=["threads"])
 
 @router.get("/projects/{project_id}/threads", response_model=list[ThreadRead])
 def list_threads(
-    project: Project = Depends(get_project_or_404),
-    db: Session = Depends(get_db),
+    project_id: str,
+    _: User = Depends(get_current_user),
+    workspace: WorkspaceService = Depends(get_workspace_service),
 ) -> list[Thread]:
-    statement = select(Thread).where(Thread.project_id == project.id).order_by(Thread.created_at.desc())
-    return list(db.scalars(statement))
+    return workspace.list_threads(project_id)
 
 
 @router.post(
@@ -27,16 +25,17 @@ def list_threads(
 )
 def create_thread(
     payload: ThreadCreate,
-    project: Project = Depends(get_project_or_404),
-    db: Session = Depends(get_db),
+    project_id: str,
+    _: User = Depends(get_current_user),
+    workspace: WorkspaceService = Depends(get_workspace_service),
 ) -> Thread:
-    thread = Thread(project_id=project.id, title=payload.title)
-    db.add(thread)
-    db.commit()
-    db.refresh(thread)
-    return thread
+    return workspace.create_thread(project_id=project_id, title=payload.title)
 
 
 @router.get("/threads/{thread_id}", response_model=ThreadRead)
-def get_thread(thread: Thread = Depends(get_thread_or_404)) -> Thread:
-    return thread
+def get_thread(
+    thread_id: str,
+    _: User = Depends(get_current_user),
+    workspace: WorkspaceService = Depends(get_workspace_service),
+) -> Thread:
+    return workspace.get_thread(thread_id)

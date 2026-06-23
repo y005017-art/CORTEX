@@ -3,11 +3,14 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
-import { createProject, listProjects, Project } from "@/lib/api";
+import { createProject, listProjects, me, Project } from "@/lib/api";
+import { AuthPanel } from "@/components/auth-panel";
+import { AuthUser, clearSession, getStoredUser } from "@/lib/auth";
 
 
 export function ProjectDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(true);
@@ -15,6 +18,12 @@ export function ProjectDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   async function loadProjects() {
+    if (!getStoredUser()) {
+      setProjects([]);
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -28,8 +37,25 @@ export function ProjectDashboard() {
   }
 
   useEffect(() => {
-    void loadProjects();
+    const stored = getStoredUser();
+    if (stored) {
+      setCurrentUser(stored);
+      void me()
+        .then((user) => setCurrentUser(user))
+        .catch(() => {
+          clearSession();
+          setCurrentUser(null);
+          setProjects([]);
+          setLoading(false);
+        });
+    } else {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void loadProjects();
+  }, [currentUser]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,6 +95,33 @@ export function ProjectDashboard() {
       </section>
 
       <section className="dashboard-grid">
+        <div className="stack-gap">
+          {currentUser ? (
+            <section className="panel stack-gap">
+              <div className="panel-header">
+                <h2>Session</h2>
+                <span>{currentUser.display_name}</span>
+              </div>
+              <p className="summary compact-summary">
+                Authenticated as {currentUser.email}. Protected workspace routes
+                are enabled.
+              </p>
+              <button
+                className="secondary-button"
+                onClick={() => {
+                  clearSession();
+                  setCurrentUser(null);
+                  setProjects([]);
+                }}
+                type="button"
+              >
+                Sign Out
+              </button>
+            </section>
+          ) : (
+            <AuthPanel onAuthenticated={setCurrentUser} />
+          )}
+
         <form className="panel stack-gap" onSubmit={handleSubmit}>
           <div className="panel-header">
             <h2>Create Project</h2>
@@ -96,10 +149,15 @@ export function ProjectDashboard() {
 
           {error ? <p className="error-text">{error}</p> : null}
 
-          <button className="primary-button" disabled={submitting} type="submit">
+          <button
+            className="primary-button"
+            disabled={submitting || !currentUser}
+            type="submit"
+          >
             {submitting ? "Creating..." : "Create Project"}
           </button>
         </form>
+        </div>
 
         <section className="panel stack-gap">
           <div className="panel-header">
@@ -110,8 +168,12 @@ export function ProjectDashboard() {
           <div className="project-list">
             {loading ? <p className="empty-state">Loading projects...</p> : null}
 
-            {!loading && projects.length === 0 ? (
+            {!loading && currentUser && projects.length === 0 ? (
               <p className="empty-state">No projects yet. Create the first one.</p>
+            ) : null}
+
+            {!loading && !currentUser ? (
+              <p className="empty-state">Sign in to load protected projects.</p>
             ) : null}
 
             {projects.map((project) => (

@@ -242,3 +242,79 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Authentication and authorization remain absent
 - Next recommended step:
   - Add auth, repository/service layering, and the first `CoWork` or `decision` application service path, or continue the frontend by introducing richer workspace navigation and decision visibility
+
+## Session Entry
+
+- Date: 2026-06-23
+- Session focus: Auth, application-layer backend wiring, and workspace insight panels
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added local auth flows with register, login, and current-user endpoints
+  - Added token-backed protected access for project, thread, message, and decision routes
+  - Added repository layer for projects, threads, messages, decisions, users, roles, and constitution rules
+  - Added service layer for auth, workspace flows, and decision application flow
+  - Added decision approval endpoint and validated approval flow
+  - Added second migration for `users` and `auth_tokens`
+  - Added frontend auth panel and local session persistence
+  - Added decision, role, and constitution panels in the workspace UI
+  - Verified decision creation and approval from the browser UI
+- In progress:
+  - Foundation now includes a protected workspace bootstrap and a visible decision/status surface
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Keep auth local and lightweight for now rather than pulling in external identity providers
+  - Keep session persistence browser-local and token-based to reduce early complexity
+  - Use service/repository layering now so later CoWork and memory flows can attach cleanly
+- Files created:
+  - `apps/api/app/core/security.py`
+  - `apps/api/app/repositories/__init__.py`
+  - `apps/api/app/repositories/projects.py`
+  - `apps/api/app/repositories/threads.py`
+  - `apps/api/app/repositories/messages.py`
+  - `apps/api/app/repositories/decisions.py`
+  - `apps/api/app/repositories/users.py`
+  - `apps/api/app/repositories/roles.py`
+  - `apps/api/app/repositories/constitution.py`
+  - `apps/api/app/services/__init__.py`
+  - `apps/api/app/services/auth.py`
+  - `apps/api/app/services/workspace.py`
+  - `apps/api/app/services/decisions.py`
+  - `apps/api/app/api/routes/auth.py`
+  - `apps/api/alembic/versions/20260623_02_auth_tables.py`
+  - `apps/web/lib/auth.ts`
+  - `apps/web/components/auth-panel.tsx`
+- Files updated:
+  - `apps/api/app/models.py`
+  - `apps/api/app/dependencies.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/api/routes/projects.py`
+  - `apps/api/app/api/routes/threads.py`
+  - `apps/api/app/api/routes/messages.py`
+  - `apps/api/app/api/routes/decisions.py`
+  - `apps/api/app/api/routes/roles.py`
+  - `apps/api/app/api/routes/constitution.py`
+  - `apps/api/app/main.py`
+  - `apps/api/README.md`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/project-dashboard.tsx`
+  - `apps/web/components/workspace-route-client.tsx`
+  - `apps/web/components/workspace-client.tsx`
+  - `apps/web/app/globals.css`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `python -m compileall app`
+  - `python -m alembic upgrade head`
+  - `npm run build`
+  - `POST /auth/register`
+  - `POST /auth/login`
+  - `GET /auth/me`
+  - Protected project/thread/message/decision route validation via API
+  - Browser sign-in validation
+  - Browser decision create/approve validation
+- Known risks:
+  - Auth is local-only and still lacks logout invalidation on the backend side
+  - There is no refresh-token or expiration policy yet
+  - Decision flow is application-level but still not connected to CoWork orchestration or memory promotion
+- Next recommended step:
+  - Introduce the first CoWork orchestration path and connect approved decisions to controlled memory, or add backend ownership/authorization rules before expanding collaboration behavior

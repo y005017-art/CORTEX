@@ -1,11 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, status
 
-from app.db import get_db
-from app.dependencies import get_thread_or_404
-from app.models import Message, Thread
+from app.dependencies import get_current_user, get_workspace_service
+from app.models import Message, User
 from app.schemas import MessageCreate, MessageRead
+from app.services.workspace import WorkspaceService
 
 
 router = APIRouter(tags=["messages"])
@@ -13,11 +11,11 @@ router = APIRouter(tags=["messages"])
 
 @router.get("/threads/{thread_id}/messages", response_model=list[MessageRead])
 def list_messages(
-    thread: Thread = Depends(get_thread_or_404),
-    db: Session = Depends(get_db),
+    thread_id: str,
+    _: User = Depends(get_current_user),
+    workspace: WorkspaceService = Depends(get_workspace_service),
 ) -> list[Message]:
-    statement = select(Message).where(Message.thread_id == thread.id).order_by(Message.created_at.asc())
-    return list(db.scalars(statement))
+    return workspace.list_messages(thread_id)
 
 
 @router.post(
@@ -27,23 +25,16 @@ def list_messages(
 )
 def create_message(
     payload: MessageCreate,
-    thread: Thread = Depends(get_thread_or_404),
-    db: Session = Depends(get_db),
+    thread_id: str,
+    _: User = Depends(get_current_user),
+    workspace: WorkspaceService = Depends(get_workspace_service),
 ) -> Message:
-    if not payload.content_text.strip():
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="content_text is required")
-
-    message = Message(
-        project_id=thread.project_id,
-        thread_id=thread.id,
+    return workspace.create_message(
+        thread_id=thread_id,
         message_type=payload.message_type,
         sender_type=payload.sender_type,
         sender_role_id=payload.sender_role_id,
         visibility=payload.visibility,
-        content_text=payload.content_text.strip(),
+        content_text=payload.content_text,
         payload_json=payload.payload_json,
     )
-    db.add(message)
-    db.commit()
-    db.refresh(message)
-    return message
