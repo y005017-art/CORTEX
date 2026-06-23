@@ -120,3 +120,57 @@ Do not overwrite previous entries unless they are factually incorrect.
   - No database, migrations, or API routing layers exist yet
 - Next recommended step:
   - Build database schema and the first `projects / threads / messages` API skeleton
+
+## Session Entry
+
+- Date: 2026-06-23
+- Session focus: Database schema v1 and API skeleton for projects, threads, and messages
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added SQLAlchemy-backed database layer
+  - Added schema v1 models for `projects`, `threads`, and `messages`
+  - Added local database configuration with environment override support
+  - Added API routes for listing and creating projects
+  - Added API routes for listing and creating threads under projects
+  - Added API routes for listing and creating messages under threads
+  - Verified the full `project -> thread -> message` flow through running HTTP calls
+- In progress:
+  - Foundation backend now has persistent API skeleton coverage for the first three domain objects
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Keep canonical production target as PostgreSQL while using local SQLite for scaffold validation
+  - Persist message protocol baseline fields directly in the first `messages` table shape
+  - Delay migrations tooling to a later slice rather than widening this phase unnecessarily
+- Files created:
+  - `apps/api/app/core/__init__.py`
+  - `apps/api/app/core/config.py`
+  - `apps/api/app/db.py`
+  - `apps/api/app/models.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/dependencies.py`
+  - `apps/api/app/api/__init__.py`
+  - `apps/api/app/api/routes/__init__.py`
+  - `apps/api/app/api/routes/projects.py`
+  - `apps/api/app/api/routes/threads.py`
+  - `apps/api/app/api/routes/messages.py`
+- Files updated:
+  - `.gitignore`
+  - `apps/api/app/main.py`
+  - `apps/api/requirements.txt`
+  - `apps/api/README.md`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `python -m compileall app`
+  - `GET /health`
+  - `GET /projects`
+  - `POST /projects`
+  - `POST /projects/{project_id}/threads`
+  - `POST /threads/{thread_id}/messages`
+  - `GET /projects/{project_id}/threads`
+  - `GET /threads/{thread_id}/messages`
+- Known risks:
+  - Migrations are not wired yet, so schema evolution still depends on model-driven table creation
+  - Authentication and authorization do not exist yet, so all routes are still open scaffold endpoints
+- Next recommended step:
+  - Add migration tooling and expand the backend skeleton with `roles`, `decisions`, and `constitution` route groups, or pause at Foundation and move to frontend workspace wiring
