@@ -114,6 +114,12 @@ export type AuthSession = {
   user: AuthUser;
 };
 
+export type CoWorkRunResult = {
+  analysis_message_id: string;
+  decision_message_id: string | null;
+  decision_id: string | null;
+};
+
 export async function listProjects(): Promise<Project[]> {
   return request<Project[]>("/projects");
 }
@@ -229,5 +235,11 @@ export async function transitionMemory(
   return request<Memory>(`/memories/${memoryId}/transition`, {
     method: "POST",
     json: { status },
+  });
+}
+
+export async function runCoWork(threadId: string): Promise<CoWorkRunResult> {
+  return request<CoWorkRunResult>(`/threads/${threadId}/cowork-run`, {
+    method: "POST",
   });
 }

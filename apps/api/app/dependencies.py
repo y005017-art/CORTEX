@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.models import Project, Thread, User
 from app.services.auth import AuthService
+from app.services.cowork import CoWorkService
 from app.services.decisions import DecisionService
 from app.services.memories import MemoryService
 from app.services.memory_governance import MemoryGovernanceService
@@ -34,6 +35,10 @@ def get_decision_service(db: Session = Depends(get_db)) -> DecisionService:
 
 def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
     return AuthService(db)
+
+
+def get_cowork_service(db: Session = Depends(get_db)) -> CoWorkService:
+    return CoWorkService(db)
 
 
 def get_memory_service(db: Session = Depends(get_db)) -> MemoryService:

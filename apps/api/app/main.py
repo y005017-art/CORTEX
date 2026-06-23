@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.bootstrap import seed_foundation_data
 from app.api.routes.auth import router as auth_router
+from app.api.routes.cowork import router as cowork_router
 from app.api.routes.constitution import router as constitution_router
 from app.api.routes.decisions import router as decisions_router
 from app.api.routes.memories import router as memories_router
@@ -43,6 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(cowork_router)
 app.include_router(projects_router)
 app.include_router(threads_router)
 app.include_router(messages_router)
@@ -69,6 +71,7 @@ def root() -> dict[str, object]:
             "/projects/{project_id}/threads",
             "/threads/{thread_id}",
             "/threads/{thread_id}/messages",
+            "/threads/{thread_id}/cowork-run",
             "/projects/{project_id}/memories",
             "/memories/{memory_id}/transition",
             "/auth/register",

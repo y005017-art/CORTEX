@@ -15,6 +15,13 @@ class MessagesRepository:
             )
         )
 
+    def latest_user_goal(self, thread_id: str) -> Message | None:
+        return self.db.scalar(
+            select(Message)
+            .where(Message.thread_id == thread_id, Message.message_type == "user_goal")
+            .order_by(Message.created_at.desc())
+        )
+
     def create(
         self,
         *,

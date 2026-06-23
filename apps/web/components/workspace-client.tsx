@@ -20,6 +20,7 @@ import {
   Role,
   Thread,
   ConstitutionRule,
+  runCoWork,
   transitionMemory,
 } from "@/lib/api";
 
@@ -46,6 +47,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   const [submittingThread, setSubmittingThread] = useState(false);
   const [submittingMessage, setSubmittingMessage] = useState(false);
   const [submittingDecision, setSubmittingDecision] = useState(false);
+  const [runningCoWork, setRunningCoWork] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedThread = useMemo(
@@ -213,6 +215,24 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
     }
   }
 
+  async function handleRunCoWork() {
+    if (!selectedThreadId) {
+      setError("Select a thread before running CoWork.");
+      return;
+    }
+
+    try {
+      setRunningCoWork(true);
+      setError(null);
+      await runCoWork(selectedThreadId);
+      await Promise.all([refreshMessages(selectedThreadId), refreshPanels()]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to run CoWork.");
+    } finally {
+      setRunningCoWork(false);
+    }
+  }
+
   return (
     <main className="workspace-shell">
       <section className="workspace-header">
@@ -272,6 +292,20 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
           <div className="panel-header">
             <h2>{selectedThread?.title ?? "Group Chat"}</h2>
             <span>{selectedThread ? selectedThread.status : "No thread selected"}</span>
+          </div>
+
+          <div className="inline-actions">
+            <span className="mini-meta">
+              Run CoWork to analyze the latest user goal in this thread.
+            </span>
+            <button
+              className="secondary-button"
+              disabled={!selectedThread || runningCoWork}
+              onClick={() => void handleRunCoWork()}
+              type="button"
+            >
+              {runningCoWork ? "Running..." : "Run CoWork"}
+            </button>
           </div>
 
           {error ? <p className="error-text">{error}</p> : null}

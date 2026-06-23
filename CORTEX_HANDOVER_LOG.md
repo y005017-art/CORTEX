@@ -416,3 +416,47 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Memory retrieval is still broad project-level retrieval without filtering strategies
 - Next recommended step:
   - Begin CoWork orchestration v1 with project/thread/message context plus verified memory retrieval, or deepen memory governance with role-based ACL and filtering rules
+
+## Session Entry
+
+- Date: 2026-06-23
+- Session focus: CoWork orchestration v1
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added backend CoWork orchestration service
+  - Added protected CoWork run endpoint for threads
+  - Implemented v1 flow that reads the latest `user_goal`, writes an `analysis` message, and may emit a `decision_proposal`
+  - Added frontend `Run CoWork` control in the workspace
+  - Verified CoWork output appears in the live thread message stream
+- In progress:
+  - Foundation now has a first deterministic orchestration path inside the workspace
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Keep CoWork v1 deterministic instead of introducing model-provider coupling at this stage
+  - Operate only on the latest `user_goal` per run to keep behavior predictable
+  - Allow CoWork to generate proposed decisions but not auto-approve them
+- Files created:
+  - `apps/api/app/services/cowork.py`
+  - `apps/api/app/api/routes/cowork.py`
+- Files updated:
+  - `apps/api/app/repositories/messages.py`
+  - `apps/api/app/dependencies.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/main.py`
+  - `apps/api/README.md`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/workspace-client.tsx`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `python -m compileall app`
+  - `npm run build`
+  - API verification of `/threads/{thread_id}/cowork-run`
+  - Browser verification of `Run CoWork` button
+  - Browser verification of emitted `analysis` and `decision_proposal` messages
+- Known risks:
+  - CoWork currently does not deduplicate repeat runs, so repeated triggers can create repeated proposals
+  - CoWork does not yet retrieve verified memory or role-specific context when composing analysis
+  - Orchestration is deterministic and intentionally shallow until model-backed coordination is added
+- Next recommended step:
+  - Add CoWork deduplication and verified memory retrieval, or start wiring provider-backed orchestration behind the current deterministic CoWork service

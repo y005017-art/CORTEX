@@ -56,6 +56,12 @@ class MessageRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CoWorkRunResponse(BaseModel):
+    analysis_message_id: str
+    decision_message_id: str | None
+    decision_id: str | None
+
+
 class RoleRead(BaseModel):
     id: str
     name: str

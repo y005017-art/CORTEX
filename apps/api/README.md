@@ -16,6 +16,7 @@ uvicorn app.main:app --reload --port 8000
 - local auth routes plus token-backed session flow
 - repository/service layering for workspace and decision operations
 - memory model with approved decision promotion into verified project memory
+- deterministic CoWork orchestration v1 for latest thread goal analysis
 
 ## Database
 
@@ -63,3 +64,11 @@ Current memory lifecycle:
 - `verified -> locked`
 - `verified -> archived`
 - `locked -> archived`
+
+## CoWork route
+
+- `POST /threads/{thread_id}/cowork-run`
+
+This v1 route analyzes the latest `user_goal` in the thread, writes a CoWork
+analysis message, and may create a decision proposal plus corresponding thread
+message when the goal is substantial enough.
