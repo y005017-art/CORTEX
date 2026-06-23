@@ -17,6 +17,9 @@ class MemoriesRepository:
             )
         )
 
+    def get(self, memory_id: str) -> Memory | None:
+        return self.db.get(Memory, memory_id)
+
     def create(
         self,
         *,
@@ -43,4 +46,10 @@ class MemoriesRepository:
         )
         self.db.add(memory)
         self.db.flush()
+        return memory
+
+    def save(self, memory: Memory) -> Memory:
+        self.db.add(memory)
+        self.db.commit()
+        self.db.refresh(memory)
         return memory

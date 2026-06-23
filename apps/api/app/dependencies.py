@@ -6,6 +6,7 @@ from app.models import Project, Thread, User
 from app.services.auth import AuthService
 from app.services.decisions import DecisionService
 from app.services.memories import MemoryService
+from app.services.memory_governance import MemoryGovernanceService
 from app.services.workspace import WorkspaceService
 
 
@@ -37,6 +38,10 @@ def get_auth_service(db: Session = Depends(get_db)) -> AuthService:
 
 def get_memory_service(db: Session = Depends(get_db)) -> MemoryService:
     return MemoryService(db)
+
+
+def get_memory_governance_service(db: Session = Depends(get_db)) -> MemoryGovernanceService:
+    return MemoryGovernanceService(db)
 
 
 def get_current_user(

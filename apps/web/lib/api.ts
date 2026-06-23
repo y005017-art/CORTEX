@@ -221,3 +221,13 @@ export async function approveDecision(decisionId: string): Promise<Decision> {
 export async function listMemories(projectId: string): Promise<Memory[]> {
   return request<Memory[]>(`/projects/${projectId}/memories`);
 }
+
+export async function transitionMemory(
+  memoryId: string,
+  status: string
+): Promise<Memory> {
+  return request<Memory>(`/memories/${memoryId}/transition`, {
+    method: "POST",
+    json: { status },
+  });
+}

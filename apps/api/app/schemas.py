@@ -143,6 +143,10 @@ class MemoryRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class MemoryTransitionRequest(BaseModel):
+    status: str = Field(min_length=1, max_length=32)
+
+
 class UserRegister(BaseModel):
     email: str = Field(min_length=3, max_length=255)
     display_name: str = Field(min_length=1, max_length=120)

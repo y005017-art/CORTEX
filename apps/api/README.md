@@ -52,5 +52,14 @@ Authorization: Bearer <token>
 ## Memory routes
 
 - `GET /projects/{project_id}/memories`
+- `POST /memories/{memory_id}/transition`
 
 Approved decisions are promoted automatically into verified memory.
+
+Current memory lifecycle:
+
+- `draft -> verified`
+- `draft -> archived`
+- `verified -> locked`
+- `verified -> archived`
+- `locked -> archived`

@@ -368,3 +368,51 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Decision approval does not yet trigger downstream orchestration or summaries
 - Next recommended step:
   - Add memory status transitions and ACL rules, or begin the first CoWork orchestration path using project/thread/message context and verified memory retrieval
+
+## Session Entry
+
+- Date: 2026-06-23
+- Session focus: Memory ACL and controlled status transitions
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added backend memory governance service
+  - Added controlled memory transition endpoint
+  - Enforced memory lifecycle transitions for draft, verified, locked, and archived states
+  - Fixed locked-memory handling so archival remains allowed while other modifications are blocked
+  - Added frontend memory transition actions for lock and archive
+  - Verified UI state changes reflect allowed transitions correctly
+- In progress:
+  - Foundation memory is now controlled rather than append-only
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Keep memory creation automatic from approved decisions, but make later status movement explicit
+  - Allow `locked -> archived`, while blocking `locked -> verified`
+  - Keep memory mutation surface minimal until wider governance exists
+- Files created:
+  - `apps/api/app/services/memory_governance.py`
+- Files updated:
+  - `apps/api/app/models.py`
+  - `apps/api/app/repositories/memories.py`
+  - `apps/api/app/dependencies.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/api/routes/memories.py`
+  - `apps/api/app/main.py`
+  - `apps/api/README.md`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/workspace-client.tsx`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `python -m compileall app`
+  - `npm run build`
+  - API verification of `verified -> locked`
+  - API rejection of `locked -> verified`
+  - API acceptance of `locked -> archived`
+  - Browser verification of memory panel action changes
+  - Browser verification of lock action from workspace UI
+- Known risks:
+  - Memory ACL is still role-light; it enforces transitions but not richer role-based access scopes yet
+  - Manual creation and editing of draft memory does not exist yet
+  - Memory retrieval is still broad project-level retrieval without filtering strategies
+- Next recommended step:
+  - Begin CoWork orchestration v1 with project/thread/message context plus verified memory retrieval, or deepen memory governance with role-based ACL and filtering rules

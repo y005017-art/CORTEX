@@ -70,6 +70,7 @@ def root() -> dict[str, object]:
             "/threads/{thread_id}",
             "/threads/{thread_id}/messages",
             "/projects/{project_id}/memories",
+            "/memories/{memory_id}/transition",
             "/auth/register",
             "/auth/login",
             "/auth/me",

@@ -20,6 +20,7 @@ import {
   Role,
   Thread,
   ConstitutionRule,
+  transitionMemory,
 } from "@/lib/api";
 
 
@@ -199,6 +200,16 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       await refreshPanels();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to approve decision.");
+    }
+  }
+
+  async function handleTransitionMemory(memoryId: string, status: string) {
+    try {
+      setError(null);
+      await transitionMemory(memoryId, status);
+      await refreshPanels();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update memory.");
     }
   }
 
@@ -428,6 +439,42 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                       ? `Approved by ${memory.approved_by}`
                       : "Awaiting approval metadata"}
                   </span>
+                  <div className="inline-actions">
+                    <span className="mini-meta">
+                      {memory.source_decision_id
+                        ? `Decision ${memory.source_decision_id.slice(0, 8)}`
+                        : "Manual source"}
+                    </span>
+                    <div className="inline-actions">
+                      {memory.status === "verified" ? (
+                        <button
+                          className="text-button"
+                          onClick={() => void handleTransitionMemory(memory.id, "locked")}
+                          type="button"
+                        >
+                          Lock
+                        </button>
+                      ) : null}
+                      {memory.status === "draft" ? (
+                        <button
+                          className="text-button"
+                          onClick={() => void handleTransitionMemory(memory.id, "verified")}
+                          type="button"
+                        >
+                          Verify
+                        </button>
+                      ) : null}
+                      {memory.status !== "archived" ? (
+                        <button
+                          className="text-button"
+                          onClick={() => void handleTransitionMemory(memory.id, "archived")}
+                          type="button"
+                        >
+                          Archive
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
                 </article>
               ))}
             </div>
