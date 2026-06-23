@@ -60,6 +60,7 @@ class CoWorkRunResponse(BaseModel):
     analysis_message_id: str
     decision_message_id: str | None
     decision_id: str | None
+    deduplicated: bool = False
 
 
 class RoleRead(BaseModel):

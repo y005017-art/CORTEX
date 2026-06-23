@@ -22,6 +22,32 @@ class MessagesRepository:
             .order_by(Message.created_at.desc())
         )
 
+    def latest_cowork_analysis_for_goal(self, thread_id: str, goal_message_id: str) -> Message | None:
+        messages = list(
+            self.db.scalars(
+                select(Message)
+                .where(
+                    Message.thread_id == thread_id,
+                    Message.message_type == "analysis",
+                    Message.sender_role_id == "cowork",
+                )
+                .order_by(Message.created_at.desc())
+            )
+        )
+
+        for message in messages:
+            if not message.payload_json:
+                continue
+            try:
+                import json
+
+                payload = json.loads(message.payload_json)
+            except Exception:
+                continue
+            if payload.get("source_message_id") == goal_message_id:
+                return message
+        return None
+
     def create(
         self,
         *,

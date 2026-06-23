@@ -24,4 +24,5 @@ def run_cowork(
         analysis_message_id=result.analysis_message.id,
         decision_message_id=result.decision_message.id if result.decision_message else None,
         decision_id=result.decision_record.id if result.decision_record else None,
+        deduplicated=result.deduplicated,
     )

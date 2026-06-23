@@ -48,6 +48,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   const [submittingMessage, setSubmittingMessage] = useState(false);
   const [submittingDecision, setSubmittingDecision] = useState(false);
   const [runningCoWork, setRunningCoWork] = useState(false);
+  const [coworkStatus, setCoworkStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const selectedThread = useMemo(
@@ -224,7 +225,12 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
     try {
       setRunningCoWork(true);
       setError(null);
-      await runCoWork(selectedThreadId);
+      const result = await runCoWork(selectedThreadId);
+      setCoworkStatus(
+        result.deduplicated
+          ? "CoWork reused the latest analysis for this goal."
+          : "CoWork generated a fresh analysis and proposal."
+      );
       await Promise.all([refreshMessages(selectedThreadId), refreshPanels()]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to run CoWork.");
@@ -307,6 +313,8 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
               {runningCoWork ? "Running..." : "Run CoWork"}
             </button>
           </div>
+
+          {coworkStatus ? <p className="mini-meta">{coworkStatus}</p> : null}
 
           {error ? <p className="error-text">{error}</p> : null}
 

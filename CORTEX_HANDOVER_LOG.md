@@ -460,3 +460,47 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Orchestration is deterministic and intentionally shallow until model-backed coordination is added
 - Next recommended step:
   - Add CoWork deduplication and verified memory retrieval, or start wiring provider-backed orchestration behind the current deterministic CoWork service
+
+## Session Entry
+
+- Date: 2026-06-23
+- Session focus: CoWork deduplication and verified-memory retrieval
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added CoWork deduplication against the latest processed `user_goal`
+  - Added verified and locked memory retrieval into CoWork context building
+  - Added UI feedback for deduplicated CoWork runs
+  - Verified repeated CoWork runs on the same goal no longer append new messages
+  - Verified CoWork analysis now references memory context when relevant
+- In progress:
+  - CoWork v1 now behaves more like a controlled orchestrator instead of a blind repeat trigger
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Deduplicate by the latest `user_goal` message id, not by fuzzy text matching
+  - Limit CoWork memory context to verified and locked memories only
+  - Keep memory context short and explicit inside the analysis output
+- Files created:
+  - None
+- Files updated:
+  - `apps/api/app/repositories/messages.py`
+  - `apps/api/app/repositories/memories.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/services/cowork.py`
+  - `apps/api/app/api/routes/cowork.py`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/workspace-client.tsx`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `python -m compileall app`
+  - `npm run build`
+  - API verification of first CoWork run versus second deduplicated run
+  - API verification that message count remains stable on deduplicated rerun
+  - Browser verification that the deduplication status message appears
+  - Browser verification that memory-aware analysis text appears in the thread
+- Known risks:
+  - Deduplication only guards against rerunning the same latest goal; older duplicate proposals still remain in historical data
+  - CoWork still uses deterministic orchestration rather than provider-backed reasoning
+  - Memory retrieval is limited to a short list and not yet ranked semantically
+- Next recommended step:
+  - Introduce provider-backed CoWork reasoning behind the current deterministic shell, or add decision-proposal deduplication and approval-path safeguards

@@ -17,6 +17,15 @@ class MemoriesRepository:
             )
         )
 
+    def list_by_project_statuses(self, project_id: str, statuses: set[str]) -> list[Memory]:
+        return list(
+            self.db.scalars(
+                select(Memory)
+                .where(Memory.project_id == project_id, Memory.status.in_(sorted(statuses)))
+                .order_by(Memory.created_at.desc())
+            )
+        )
+
     def get(self, memory_id: str) -> Memory | None:
         return self.db.get(Memory, memory_id)
 
