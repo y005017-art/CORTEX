@@ -72,3 +72,51 @@ Do not overwrite previous entries unless they are factually incorrect.
 - Next recommended step:
   - Scaffold repo structure and begin Foundation implementation
 
+## Session Entry
+
+- Date: 2026-06-23
+- Session focus: Foundation scaffold implementation
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Initialized frontend scaffold in `apps/web`
+  - Initialized backend scaffold in `apps/api`
+  - Added root ignore rules for generated artifacts and local environments
+  - Created a minimal Next.js verification page
+  - Created a minimal FastAPI health endpoint and root endpoint
+  - Installed frontend and backend dependencies
+  - Verified production web build succeeds
+  - Verified backend Python modules compile cleanly
+  - Started local web and API services and verified responses
+- In progress:
+  - Foundation scaffolding is complete enough to begin the next implementation slice
+- Blockers:
+  - None for scaffold completion
+- Decisions made:
+  - Keep the initial backend extremely small and health-first
+  - Use `apps/web` and `apps/api` as the primary application roots
+  - Upgrade Next.js to a patched release line before freezing the first scaffold baseline
+- Files created:
+  - `.gitignore`
+  - `apps/web/package.json`
+  - `apps/web/tsconfig.json`
+  - `apps/web/next-env.d.ts`
+  - `apps/web/next.config.ts`
+  - `apps/web/app/layout.tsx`
+  - `apps/web/app/page.tsx`
+  - `apps/web/app/globals.css`
+  - `apps/api/requirements.txt`
+  - `apps/api/app/__init__.py`
+  - `apps/api/app/main.py`
+  - `apps/api/README.md`
+- Files updated:
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `npm run build` in `apps/web`
+  - `python -m compileall app` in `apps/api`
+  - HTTP verification on `http://127.0.0.1:3000`
+  - HTTP verification on `http://127.0.0.1:8000/health`
+- Known risks:
+  - `npm audit` still reports two non-blocking vulnerabilities that need a later dependency review
+  - No database, migrations, or API routing layers exist yet
+- Next recommended step:
+  - Build database schema and the first `projects / threads / messages` API skeleton
