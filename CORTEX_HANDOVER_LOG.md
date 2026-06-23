@@ -174,3 +174,71 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Authentication and authorization do not exist yet, so all routes are still open scaffold endpoints
 - Next recommended step:
   - Add migration tooling and expand the backend skeleton with `roles`, `decisions`, and `constitution` route groups, or pause at Foundation and move to frontend workspace wiring
+
+## Session Entry
+
+- Date: 2026-06-23
+- Session focus: Backend Foundation expansion plus frontend workspace wiring
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added Alembic migration tooling baseline
+  - Added foundation schema migration for `constitution_rules`, `projects`, `roles`, `threads`, `decisions`, and `messages`
+  - Added backend route groups for `roles`, `constitution`, and `decisions`
+  - Added seed bootstrap for permanent roles and foundation constitution rules
+  - Added browser-safe CORS configuration for local frontend integration
+  - Reworked frontend dashboard into a live projects workspace bootstrap screen
+  - Added project workspace route with threads and message stream UI
+  - Wired frontend create/list flows to the running `projects / threads / messages` APIs
+  - Verified message creation from the browser UI into the API
+- In progress:
+  - Foundation now includes a usable end-to-end workspace bootstrap slice
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Keep route group expansion limited to skeleton-level `roles`, `constitution`, and `decisions`
+  - Use local SQLite plus Alembic for validation while preserving PostgreSQL as the canonical target
+  - Keep frontend data access direct and minimal instead of introducing a separate app-layer abstraction this early
+- Files created:
+  - `apps/api/alembic.ini`
+  - `apps/api/alembic/env.py`
+  - `apps/api/alembic/script.py.mako`
+  - `apps/api/alembic/versions/20260623_01_initial_foundation_schema.py`
+  - `apps/api/app/bootstrap.py`
+  - `apps/api/app/api/routes/roles.py`
+  - `apps/api/app/api/routes/constitution.py`
+  - `apps/api/app/api/routes/decisions.py`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/project-dashboard.tsx`
+  - `apps/web/components/workspace-client.tsx`
+  - `apps/web/components/workspace-route-client.tsx`
+  - `apps/web/app/projects/[projectId]/page.tsx`
+- Files updated:
+  - `.gitignore`
+  - `apps/api/requirements.txt`
+  - `apps/api/app/models.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/main.py`
+  - `apps/api/README.md`
+  - `apps/web/app/page.tsx`
+  - `apps/web/app/globals.css`
+  - `apps/web/tsconfig.json`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `npm run build` in `apps/web`
+  - `python -m compileall app` in `apps/api`
+  - `python -m alembic upgrade head`
+  - `GET /roles`
+  - `GET /constitution/rules`
+  - `POST /constitution/evaluate`
+  - `POST /projects`
+  - `POST /projects/{project_id}/threads`
+  - `POST /threads/{thread_id}/messages`
+  - `POST /projects/{project_id}/decisions`
+  - Browser verification of dashboard and workspace pages
+  - Browser UI message send verification
+- Known risks:
+  - Migrations are baseline-only; there is not yet a disciplined revision workflow beyond the first migration
+  - Frontend state is still local-component based and not yet organized into larger app-level modules
+  - Authentication and authorization remain absent
+- Next recommended step:
+  - Add auth, repository/service layering, and the first `CoWork` or `decision` application service path, or continue the frontend by introducing richer workspace navigation and decision visibility

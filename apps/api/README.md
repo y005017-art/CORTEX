@@ -11,7 +11,8 @@ uvicorn app.main:app --reload --port 8000
 ## Current scope
 
 - database schema v1 for `projects`, `threads`, and `messages`
-- API skeleton for project, thread, and message flows
+- API skeleton for project, thread, message, role, constitution, and decision flows
+- Alembic migration tooling baseline
 
 ## Database
 
@@ -24,3 +25,11 @@ sqlite:///./cortex.db
 ```
 
 Override with `DATABASE_URL` when wiring a PostgreSQL instance.
+
+## Migrations
+
+Initialize the local database with:
+
+```bash
+alembic upgrade head
+```

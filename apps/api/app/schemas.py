@@ -54,3 +54,63 @@ class MessageRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class RoleRead(BaseModel):
+    id: str
+    name: str
+    role_type: str
+    is_permanent: bool
+    status: str
+    prompt_key: str | None
+    description: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ConstitutionRuleRead(BaseModel):
+    id: str
+    rule_code: str
+    name: str
+    scope: str
+    description: str
+    enforcement_action: str
+    severity: str
+    active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ConstitutionEvaluateRequest(BaseModel):
+    actor_role: str
+    action_type: str
+    target_type: str
+
+
+class ConstitutionEvaluateResponse(BaseModel):
+    status: str
+    rule_code: str
+    reason: str
+
+
+class DecisionCreate(BaseModel):
+    thread_id: str | None = None
+    title: str = Field(min_length=1, max_length=160)
+    summary: str = Field(min_length=1)
+    proposed_by: str | None = None
+
+
+class DecisionRead(BaseModel):
+    id: str
+    project_id: str
+    thread_id: str | None
+    title: str
+    summary: str
+    status: str
+    proposed_by: str | None
+    approved_by: str | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
