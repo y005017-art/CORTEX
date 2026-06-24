@@ -61,6 +61,7 @@ class CoWorkRunResponse(BaseModel):
     decision_message_id: str | None
     decision_id: str | None
     deduplicated: bool = False
+    provider_key: str | None = None
 
 
 class RoleRead(BaseModel):
@@ -100,6 +101,19 @@ class ConstitutionEvaluateResponse(BaseModel):
     status: str
     rule_code: str
     reason: str
+
+
+class ProviderHealthRead(BaseModel):
+    provider_key: str
+    display_name: str
+    enabled: bool
+    available: bool
+    reason: str | None
+
+
+class ProviderHealthResponse(BaseModel):
+    default_provider: str
+    providers: list[ProviderHealthRead]
 
 
 class DecisionCreate(BaseModel):

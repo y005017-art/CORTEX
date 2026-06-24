@@ -17,6 +17,7 @@ uvicorn app.main:app --reload --port 8000
 - repository/service layering for workspace and decision operations
 - memory model with approved decision promotion into verified project memory
 - deterministic CoWork orchestration v1 for latest thread goal analysis
+- provider adapter boundary with deterministic default provider and provider health routes
 
 ## Database
 
@@ -72,3 +73,14 @@ Current memory lifecycle:
 This v1 route analyzes the latest `user_goal` in the thread, writes a CoWork
 analysis message, and may create a decision proposal plus corresponding thread
 message when the goal is substantial enough.
+
+## Provider routes
+
+- `GET /providers`
+- `GET /providers/health`
+
+Current default provider:
+
+```text
+deterministic
+```

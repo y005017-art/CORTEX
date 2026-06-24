@@ -124,6 +124,7 @@ export type CoWorkRunResult = {
   decision_message_id: string | null;
   decision_id: string | null;
   deduplicated: boolean;
+  provider_key: string | null;
 };
 
 export async function listProjects(): Promise<Project[]> {

@@ -548,3 +548,58 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Provider-backed reasoning still has not been introduced into CoWork
 - Next recommended step:
   - Start the provider adapter boundary and plug CoWork into that shared interface, or formalize policy evaluation as an explicit service contract before expanding more role behavior
+
+## Session Entry
+
+- Date: 2026-06-24
+- Session focus: Provider adapter boundary and CoWork provider routing
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added a formal `providers` module with a shared adapter interface for `send_message`, `stream_message`, `tool_call`, `embed`, and `count_tokens`
+  - Added a deterministic default adapter and routed CoWork analysis generation through that adapter layer
+  - Added a registry and provider service for default-provider resolution
+  - Added protected `GET /providers` and `GET /providers/health` routes
+  - Added provider metadata into CoWork responses and analysis payloads
+  - Exposed the active provider label in the workspace CoWork status text
+- In progress:
+  - CORTEX now has a real provider boundary even though execution still defaults to deterministic orchestration
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Keep `deterministic` as the active default provider for this phase
+  - Add `openai` as a registered adapter boundary without wiring live execution yet
+  - Keep provider visibility lightweight and avoid building a full switching UI at this stage
+- Files created:
+  - `apps/api/app/providers/__init__.py`
+  - `apps/api/app/providers/base.py`
+  - `apps/api/app/providers/deterministic.py`
+  - `apps/api/app/providers/openai_adapter.py`
+  - `apps/api/app/providers/registry.py`
+  - `apps/api/app/services/providers.py`
+  - `apps/api/app/api/routes/providers.py`
+- Files updated:
+  - `apps/api/app/core/config.py`
+  - `apps/api/app/dependencies.py`
+  - `apps/api/app/main.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/api/routes/cowork.py`
+  - `apps/api/app/services/cowork.py`
+  - `apps/api/README.md`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/workspace-client.tsx`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `py -m compileall app`
+  - `npm run build`
+  - Local deploy verification at `http://127.0.0.1:8000/health`
+  - Local deploy verification at `http://127.0.0.1:3000`
+  - API verification of `GET /providers`
+  - API verification of `GET /providers/health`
+  - API verification that CoWork returns `provider_key`
+  - API verification that analysis payload persists `provider_key=deterministic`
+- Known risks:
+  - The `openai` adapter is currently a registered boundary only and not yet live for message execution
+  - Provider selection is still configuration-driven and not yet governed through explicit policy or workspace controls
+  - Token counting and embeddings remain placeholder-level for the deterministic provider
+- Next recommended step:
+  - Wire live OpenAI execution behind the new adapter boundary, or add a policy-layer precheck service before expanding provider choice and role orchestration

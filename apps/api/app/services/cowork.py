@@ -7,6 +7,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models import Decision, Message, Thread
+from app.providers.base import ProviderMessage
+from app.providers.registry import ProviderRegistry
 from app.repositories.decisions import DecisionsRepository
 from app.repositories.memories import MemoriesRepository
 from app.repositories.messages import MessagesRepository
@@ -20,11 +22,13 @@ class CoWorkRunResult:
     decision_message: Message | None
     decision_record: Decision | None
     deduplicated: bool = False
+    provider_key: str | None = None
 
 
 class CoWorkService:
-    def __init__(self, db: Session):
+    def __init__(self, db: Session, *, provider_registry: ProviderRegistry):
         self.db = db
+        self.provider_registry = provider_registry
         self.projects = ProjectsRepository(db)
         self.threads = ThreadsRepository(db)
         self.messages = MessagesRepository(db)
@@ -52,10 +56,33 @@ class CoWorkService:
                 decision_message=decision_message,
                 decision_record=decision_record,
                 deduplicated=True,
+                provider_key=self._provider_key_from_analysis(existing_analysis),
             )
 
         verified_memories = self.memories.list_by_project_statuses(thread.project_id, {"verified", "locked"})
-        analysis_payload = self._build_analysis_payload(goal_message, verified_memories)
+        memory_context = [
+            {
+                "memory_id": memory.id,
+                "status": memory.status,
+                "snippet": memory.content[:120],
+            }
+            for memory in verified_memories[:3]
+        ]
+        provider = self.provider_registry.get_default()
+        provider_response = provider.send_message(
+            messages=[ProviderMessage(role="user", content=goal_message.content_text)],
+            system_prompt="You are CoWork. Return structured execution guidance.",
+            metadata={
+                "thread_id": thread.id,
+                "project_id": thread.project_id,
+                "goal_text": goal_message.content_text,
+                "memory_context": memory_context,
+            },
+        )
+        analysis_payload = {
+            "source_message_id": goal_message.id,
+            **provider_response.structured_output,
+        }
         analysis_text = self._render_analysis_text(analysis_payload)
 
         analysis_message = self.messages.create(
@@ -135,53 +162,20 @@ class CoWorkService:
             decision_message=decision_message,
             decision_record=decision_record,
             deduplicated=False,
+            provider_key=provider.provider_key,
         )
-
-    def _build_analysis_payload(self, goal_message: Message, memories) -> dict[str, object]:
-        normalized = " ".join(goal_message.content_text.split())
-        words = normalized.split()
-        focus = normalized[:160]
-        recommend_decision = len(words) >= 6
-        memory_context = [
-            {
-                "memory_id": memory.id,
-                "status": memory.status,
-                "snippet": memory.content[:120],
-            }
-            for memory in memories[:3]
-        ]
-        checkpoints = [
-            "Clarify objective and success criteria",
-            "Break the request into executable tasks",
-            "Surface decision points and constraints",
-        ]
-        if memory_context:
-            checkpoints.append("Reuse verified memory before creating new execution branches")
-
-        return {
-            "source_message_id": goal_message.id,
-            "goal_excerpt": focus,
-            "recommend_decision": recommend_decision,
-            "summary": f"CoWork reviewed the latest goal and mapped the next execution checkpoints for: {focus}",
-            "checkpoints": checkpoints,
-            "memory_context": memory_context,
-            "decision_title": f"CoWork proposal: {focus[:60]}".strip(),
-            "decision_summary": (
-                "Proceed with structured execution based on the latest goal, "
-                "using the identified checkpoints as the immediate operating plan."
-            ),
-        }
 
     def _render_analysis_text(self, payload: dict[str, object]) -> str:
         checkpoints = payload["checkpoints"]
         rendered = "\n".join(f"- {item}" for item in checkpoints)
         memory_context = payload.get("memory_context", [])
+        provider_line = f"Provider: {payload['provider_key']}\n\n" if payload.get("provider_key") else ""
         if memory_context:
             rendered_memories = "\n".join(
                 f"- [{item['status']}] {item['snippet']}" for item in memory_context
             )
-            return f"{payload['summary']}\n\n{rendered}\n\nMemory context:\n{rendered_memories}"
-        return f"{payload['summary']}\n\n{rendered}"
+            return f"{provider_line}{payload['summary']}\n\n{rendered}\n\nMemory context:\n{rendered_memories}"
+        return f"{provider_line}{payload['summary']}\n\n{rendered}"
 
     def _find_matching_decision_message(self, thread: Thread, analysis_message: Message) -> Message | None:
         if not analysis_message.payload_json:
@@ -253,3 +247,13 @@ class CoWorkService:
 
     def _normalize(self, value: str) -> str:
         return " ".join(value.lower().split())
+
+    def _provider_key_from_analysis(self, analysis_message: Message) -> str | None:
+        if not analysis_message.payload_json:
+            return None
+        try:
+            payload = json.loads(analysis_message.payload_json)
+        except Exception:
+            return None
+        provider_key = payload.get("provider_key")
+        return provider_key if isinstance(provider_key, str) else None

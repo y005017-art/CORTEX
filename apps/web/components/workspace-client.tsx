@@ -229,10 +229,11 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setRunningCoWork(true);
       setError(null);
       const result = await runCoWork(selectedThreadId);
+      const providerLabel = result.provider_key ? ` via ${result.provider_key}` : "";
       setCoworkStatus(
         result.deduplicated
-          ? "CoWork reused the latest analysis for this goal."
-          : "CoWork generated a fresh analysis and proposal."
+          ? `CoWork reused the latest analysis for this goal${providerLabel}.`
+          : `CoWork generated a fresh analysis and proposal${providerLabel}.`
       );
       await Promise.all([refreshMessages(selectedThreadId), refreshPanels()]);
     } catch (err) {

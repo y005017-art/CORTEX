@@ -10,6 +10,7 @@ from app.api.routes.constitution import router as constitution_router
 from app.api.routes.decisions import router as decisions_router
 from app.api.routes.memories import router as memories_router
 from app.api.routes.messages import router as messages_router
+from app.api.routes.providers import router as providers_router
 from app.api.routes.projects import router as projects_router
 from app.api.routes.roles import router as roles_router
 from app.api.routes.threads import router as threads_router
@@ -48,6 +49,7 @@ app.include_router(cowork_router)
 app.include_router(projects_router)
 app.include_router(threads_router)
 app.include_router(messages_router)
+app.include_router(providers_router)
 app.include_router(memories_router)
 app.include_router(roles_router)
 app.include_router(constitution_router)
@@ -72,6 +74,8 @@ def root() -> dict[str, object]:
             "/threads/{thread_id}",
             "/threads/{thread_id}/messages",
             "/threads/{thread_id}/cowork-run",
+            "/providers",
+            "/providers/health",
             "/projects/{project_id}/memories",
             "/memories/{memory_id}/transition",
             "/auth/register",
