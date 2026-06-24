@@ -141,6 +141,13 @@ function createWindow() {
     minHeight: 820,
     backgroundColor: "#0b1220",
     title: "CORTEX Desktop",
+    autoHideMenuBar: true,
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#0f141c",
+      symbolColor: "#dbe6f3",
+      height: 40,
+    },
     webPreferences: {
       preload: path.join(app.getAppPath(), "dist-electron", "electron", "preload.js"),
       contextIsolation: true,
@@ -174,6 +181,8 @@ function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
+
+  mainWindow.setMenuBarVisibility(false);
 }
 
 ipcMain.handle("workbench:get-bootstrap", () => ({
