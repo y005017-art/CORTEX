@@ -20,6 +20,13 @@ class DecisionsRepository:
     def get(self, decision_id: str) -> Decision | None:
         return self.db.get(Decision, decision_id)
 
+    def list_by_thread(self, thread_id: str) -> list[Decision]:
+        return list(
+            self.db.scalars(
+                select(Decision).where(Decision.thread_id == thread_id).order_by(Decision.created_at.asc())
+            )
+        )
+
     def create(
         self,
         *,

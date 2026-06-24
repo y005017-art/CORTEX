@@ -200,7 +200,10 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
     try {
       setError(null);
       await approveDecision(decisionId);
-      await refreshPanels();
+      await Promise.all([
+        refreshPanels(),
+        selectedThreadId ? refreshMessages(selectedThreadId) : Promise.resolve(),
+      ]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to approve decision.");
     }

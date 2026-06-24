@@ -74,30 +74,61 @@ class CoWorkService:
         if analysis_payload["recommend_decision"]:
             decision_title = analysis_payload["decision_title"]
             decision_summary = analysis_payload["decision_summary"]
-            decision_record = self.decisions.create(
-                project_id=thread.project_id,
-                thread_id=thread.id,
+            existing_decision = self._find_equivalent_thread_decision(
+                thread=thread,
                 title=decision_title,
                 summary=decision_summary,
-                proposed_by="CoWork",
             )
-            decision_message = self.messages.create(
-                project_id=thread.project_id,
-                thread_id=thread.id,
-                message_type="decision_proposal",
-                sender_type="role",
-                sender_role_id="cowork",
-                visibility="project",
-                content_text=f"{decision_title}\n\n{decision_summary}",
-                payload_json=json.dumps(
-                    {
-                        "source_message_id": goal_message.id,
-                        "decision_id": decision_record.id,
-                        "decision_title": decision_title,
-                        "decision_summary": decision_summary,
-                    }
-                ),
-            )
+            if existing_decision is not None:
+                decision_record = existing_decision
+                decision_message = self._find_decision_message_for_record(
+                    thread,
+                    existing_decision,
+                    source_message_id=goal_message.id,
+                )
+                if decision_message is None:
+                    decision_message = self.messages.create(
+                        project_id=thread.project_id,
+                        thread_id=thread.id,
+                        message_type="decision_proposal",
+                        sender_type="role",
+                        sender_role_id="cowork",
+                        visibility="project",
+                        content_text=f"{decision_title}\n\n{decision_summary}",
+                        payload_json=json.dumps(
+                            {
+                                "source_message_id": goal_message.id,
+                                "decision_id": decision_record.id,
+                                "decision_title": decision_title,
+                                "decision_summary": decision_summary,
+                            }
+                        ),
+                    )
+            else:
+                decision_record = self.decisions.create(
+                    project_id=thread.project_id,
+                    thread_id=thread.id,
+                    title=decision_title,
+                    summary=decision_summary,
+                    proposed_by="CoWork",
+                )
+                decision_message = self.messages.create(
+                    project_id=thread.project_id,
+                    thread_id=thread.id,
+                    message_type="decision_proposal",
+                    sender_type="role",
+                    sender_role_id="cowork",
+                    visibility="project",
+                    content_text=f"{decision_title}\n\n{decision_summary}",
+                    payload_json=json.dumps(
+                        {
+                            "source_message_id": goal_message.id,
+                            "decision_id": decision_record.id,
+                            "decision_title": decision_title,
+                            "decision_summary": decision_summary,
+                        }
+                    ),
+                )
 
         return CoWorkRunResult(
             analysis_message=analysis_message,
@@ -185,3 +216,40 @@ class CoWorkService:
         if not decision_id:
             return None
         return self.decisions.get(decision_id)
+
+    def _find_equivalent_thread_decision(self, *, thread: Thread, title: str, summary: str) -> Decision | None:
+        normalized_title = self._normalize(title)
+        normalized_summary = self._normalize(summary)
+        for decision in reversed(self.decisions.list_by_thread(thread.id)):
+            if (
+                self._normalize(decision.title) == normalized_title
+                and self._normalize(decision.summary) == normalized_summary
+            ):
+                return decision
+        return None
+
+    def _find_decision_message_for_record(
+        self,
+        thread: Thread,
+        decision: Decision,
+        *,
+        source_message_id: str | None = None,
+    ) -> Message | None:
+        messages = self.messages.list_by_thread(thread.id)
+        for message in reversed(messages):
+            if message.message_type != "decision_proposal" or not message.payload_json:
+                continue
+            try:
+                payload = json.loads(message.payload_json)
+            except Exception:
+                continue
+            if payload.get("decision_id") != decision.id:
+                continue
+            if source_message_id is not None and payload.get("source_message_id") != source_message_id:
+                continue
+            if payload.get("decision_id") == decision.id:
+                return message
+        return None
+
+    def _normalize(self, value: str) -> str:
+        return " ".join(value.lower().split())

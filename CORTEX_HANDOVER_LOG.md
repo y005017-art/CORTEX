@@ -504,3 +504,47 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Memory retrieval is limited to a short list and not yet ranked semantically
 - Next recommended step:
   - Introduce provider-backed CoWork reasoning behind the current deterministic shell, or add decision-proposal deduplication and approval-path safeguards
+
+## Session Entry
+
+- Date: 2026-06-24
+- Session focus: Decision-proposal deduplication and approval safeguards
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Reused equivalent CoWork decision records within the same thread instead of creating duplicate decision rows
+  - Re-issued a fresh `decision_proposal` message when the latest goal matched an existing equivalent decision record
+  - Blocked approval of stale CoWork proposals when a newer thread goal exists
+  - Blocked approval of duplicate decisions when an equivalent approved decision already exists in the project
+  - Improved frontend error handling so approval guard reasons appear cleanly in the workspace UI
+- In progress:
+  - CoWork decision flow now has a guarded path from proposal to verified memory rather than a loose approve-anything path
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Deduplicate CoWork proposals at the decision-record layer using normalized title and summary matching inside the thread
+  - Treat CoWork approvals as context-bound to the latest goal in the thread
+  - Keep already approved decisions idempotent instead of failing repeat approval attempts
+- Files created:
+  - None
+- Files updated:
+  - `apps/api/app/repositories/decisions.py`
+  - `apps/api/app/services/cowork.py`
+  - `apps/api/app/services/decisions.py`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/workspace-client.tsx`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `py -m compileall app`
+  - `npm run build`
+  - Local deploy verification at `http://127.0.0.1:8000/health`
+  - Local deploy verification at `http://127.0.0.1:3000`
+  - API verification that stale CoWork proposals return `409`
+  - API verification that rerunning CoWork on the latest goal allows approval and promotes verified memory
+  - API verification that duplicate approval attempts against equivalent approved decisions return `409`
+  - API verification that equivalent repeated goals reuse a single decision record in-thread
+- Known risks:
+  - Decision equivalence currently relies on normalized title and summary matching rather than semantic similarity
+  - Approval safeguards are implemented in service logic and not yet exposed through a standalone policy engine
+  - Provider-backed reasoning still has not been introduced into CoWork
+- Next recommended step:
+  - Start the provider adapter boundary and plug CoWork into that shared interface, or formalize policy evaluation as an explicit service contract before expanding more role behavior
