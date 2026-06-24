@@ -1,7 +1,5 @@
 @echo off
 setlocal
-cd /d C:\CORTEX\apps\desktop
-
-set CORTEX_API_BASE_URL=http://127.0.0.1:8000
-
-start "" cmd /k "npm run start"
+cd /d "%~dp0"
+powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0launch-cortex-desktop.ps1"
+endlocal
