@@ -29,7 +29,7 @@ export function ProjectDashboard() {
       const data = await listProjects();
       setProjects(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "載入專案失敗。");
+      setError(err instanceof Error ? err.message : "讀取專案清單時發生問題。");
     } finally {
       setLoading(false);
     }
@@ -59,7 +59,7 @@ export function ProjectDashboard() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) {
-      setError("專案名稱為必填。");
+      setError("請先輸入專案名稱。");
       return;
     }
 
@@ -74,7 +74,7 @@ export function ProjectDashboard() {
       setDescription("");
       await loadProjects();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "建立專案失敗。");
+      setError(err instanceof Error ? err.message : "建立專案時發生問題。");
     } finally {
       setSubmitting(false);
     }
@@ -85,9 +85,9 @@ export function ProjectDashboard() {
       <section className="hero-band">
         <div className="hero-copy">
           <p className="eyebrow">CORTEX</p>
-          <h1>多視窗協作工作台</h1>
+          <h1>多角色工作 Chat 平台</h1>
           <p className="summary">
-            以聊天視窗為核心，整理專案、角色、決策與記憶，讓整個工作流程留在同一個平台內推進。
+            每個角色都有自己的工作視窗，能獨立接收任務、保留上下文、累積決策與記憶。你建立的每個專案，都會變成一面可持續協作的角色工作牆。
           </p>
         </div>
         <div className="hero-stats">
@@ -96,8 +96,8 @@ export function ProjectDashboard() {
             <span>專案</span>
           </div>
           <div className="hero-stat">
-            <strong>{currentUser ? "已登入" : "待登入"}</strong>
-            <span>狀態</span>
+            <strong>{currentUser ? "已登入" : "未登入"}</strong>
+            <span>目前狀態</span>
           </div>
         </div>
       </section>
@@ -108,7 +108,7 @@ export function ProjectDashboard() {
             <section className="surface stack-gap">
               <div className="surface-header">
                 <div>
-                  <p className="section-kicker">目前帳號</p>
+                  <p className="section-kicker">帳號</p>
                   <h2>{currentUser.display_name}</h2>
                 </div>
                 <span className="section-meta">已登入</span>
@@ -134,9 +134,9 @@ export function ProjectDashboard() {
             <div className="surface-header">
               <div>
                 <p className="section-kicker">新專案</p>
-                <h2>建立工作空間</h2>
+                <h2>建立角色工作牆</h2>
               </div>
-              <span className="section-meta">手動建立</span>
+              <span className="section-meta">建立後立即進入工作台</span>
             </div>
 
             <label className="field">
@@ -144,16 +144,16 @@ export function ProjectDashboard() {
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="例如：CORTEX 核心工作台"
+                placeholder="例如：CORTEX 第一階段"
               />
             </label>
 
             <label className="field">
-              <span>專案描述</span>
+              <span>專案說明</span>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="可填入目前目標、工作範圍或驗證用途"
+                placeholder="描述這個專案的目標、協作方式與邊界"
                 rows={4}
               />
             </label>
@@ -169,20 +169,20 @@ export function ProjectDashboard() {
         <section className="surface project-hub">
           <div className="surface-header">
             <div>
-              <p className="section-kicker">工作台入口</p>
-              <h2>專案總覽</h2>
+              <p className="section-kicker">專案列表</p>
+              <h2>進入既有工作牆</h2>
             </div>
-            <span className="section-meta">{loading ? "載入中" : `共 ${projects.length} 個`}</span>
+            <span className="section-meta">{loading ? "載入中" : `${projects.length} 個專案`}</span>
           </div>
 
-          {loading ? <p className="empty-state">正在載入專案...</p> : null}
+          {loading ? <p className="empty-state">正在載入專案列表...</p> : null}
 
           {!loading && currentUser && projects.length === 0 ? (
-            <p className="empty-state">目前還沒有專案，先建立第一個工作空間。</p>
+            <p className="empty-state">目前還沒有專案，先建立第一面角色工作牆。</p>
           ) : null}
 
           {!loading && !currentUser ? (
-            <p className="empty-state">請先登入，才能載入受保護的專案。</p>
+            <p className="empty-state">請先登入，登入後就能建立專案並進入工作台。</p>
           ) : null}
 
           <div className="project-grid">
@@ -192,9 +192,9 @@ export function ProjectDashboard() {
                   <strong>{project.name}</strong>
                   <span>{project.status}</span>
                 </div>
-                <p>{project.description || "尚未填寫描述。"}</p>
+                <p>{project.description || "尚未填寫專案說明。"}</p>
                 <div className="project-tile-foot">
-                  <span>進入工作台</span>
+                  <span>進入角色工作牆</span>
                 </div>
               </Link>
             ))}

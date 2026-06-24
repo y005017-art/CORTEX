@@ -29,7 +29,7 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
       storeSession(session.token, session.user);
       onAuthenticated(session.user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "驗證失敗。");
+      setError(err instanceof Error ? err.message : "登入流程發生問題。");
     } finally {
       setSubmitting(false);
     }
@@ -42,7 +42,7 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
           <p className="section-kicker">帳號</p>
           <h2>{mode === "login" ? "登入 CORTEX" : "建立 CORTEX 帳號"}</h2>
         </div>
-        <span className="section-meta">本機驗證</span>
+        <span className="section-meta">角色工作台入口</span>
       </div>
 
       <form className="stack-gap" onSubmit={handleSubmit}>
@@ -70,11 +70,7 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
         {error ? <p className="error-text">{error}</p> : null}
 
         <button className="primary-button" disabled={submitting} type="submit">
-          {submitting
-            ? "處理中..."
-            : mode === "login"
-              ? "登入"
-              : "建立帳號"}
+          {submitting ? "處理中..." : mode === "login" ? "登入" : "建立帳號"}
         </button>
       </form>
 
@@ -83,7 +79,7 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
         onClick={() => setMode(mode === "login" ? "register" : "login")}
         type="button"
       >
-        {mode === "login" ? "還沒有帳號？改用註冊" : "已經有帳號？改用登入"}
+        {mode === "login" ? "沒有帳號？改成註冊" : "已有帳號？回到登入"}
       </button>
     </section>
   );

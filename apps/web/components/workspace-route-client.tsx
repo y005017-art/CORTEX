@@ -18,22 +18,23 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
   useEffect(() => {
     async function loadProject() {
       if (!getStoredToken()) {
-        setError("請先從首頁登入，再進入工作空間。");
+        setError("請先登入，才能進入 CORTEX 工作台。");
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
+        setError(null);
         const projects = await listProjects();
         const match = projects.find((entry) => entry.id === projectId) ?? null;
         if (!match) {
-          setError("找不到專案。");
+          setError("找不到這個專案。");
           return;
         }
         setProject(match);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "載入專案失敗。");
+        setError(err instanceof Error ? err.message : "載入專案時發生問題。");
       } finally {
         setLoading(false);
       }
@@ -46,7 +47,7 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
     return (
       <main className="workspace-shell">
         <section className="surface">
-          <p className="empty-state">正在載入工作空間...</p>
+          <p className="empty-state">正在載入 CORTEX 工作台...</p>
         </section>
       </main>
     );
@@ -56,7 +57,7 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
     return (
       <main className="workspace-shell">
         <section className="surface">
-          <p className="error-text">{error ?? "找不到專案。"}</p>
+          <p className="error-text">{error ?? "找不到這個專案。"}</p>
         </section>
       </main>
     );
