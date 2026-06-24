@@ -5,25 +5,24 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import {
   approveDecision,
   ChatSession,
+  ConstitutionRule,
   createChatSession,
-  createMessage,
   createDecision,
+  createMessage,
   Decision,
-  listMemories,
+  listChatSessions,
   listDecisions,
+  listMemories,
+  listMessages,
   listRoles,
   listRules,
-  listChatSessions,
   Memory,
-  listMessages,
   Message,
   Project,
   Role,
-  ConstitutionRule,
   runCoWork,
   transitionMemory,
 } from "@/lib/api";
-
 
 type WorkspaceClientProps = {
   project: Project;
@@ -69,7 +68,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         (data.length > 0 ? data[0].id : null);
       setSelectedSessionId(nextSelected);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load chat sessions.");
+      setError(err instanceof Error ? err.message : "載入聊天視窗失敗。");
     } finally {
       setLoadingSessions(false);
     }
@@ -81,7 +80,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       const data = await listMessages(threadId);
       setMessages(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load messages.");
+      setError(err instanceof Error ? err.message : "載入訊息失敗。");
     } finally {
       setLoadingMessages(false);
     }
@@ -101,7 +100,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setRules(ruleData);
       setMemories(memoryData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load workspace panels.");
+      setError(err instanceof Error ? err.message : "載入工作空間面板失敗。");
     } finally {
       setLoadingPanels(false);
     }
@@ -126,7 +125,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   async function handleCreateChatSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!sessionTitle.trim()) {
-      setError("Session title is required.");
+      setError("視窗名稱為必填。");
       return;
     }
 
@@ -140,7 +139,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setSessionTitle("");
       await refreshChatSessions(session.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create chat session.");
+      setError(err instanceof Error ? err.message : "建立聊天視窗失敗。");
     } finally {
       setSubmittingSession(false);
     }
@@ -149,12 +148,12 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   async function handleCreateMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedThreadId) {
-      setError("Create a chat session before sending a message.");
+      setError("請先建立聊天視窗再發送訊息。");
       return;
     }
 
     if (!messageDraft.trim()) {
-      setError("Message is required.");
+      setError("訊息內容為必填。");
       return;
     }
 
@@ -170,7 +169,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setMessageDraft("");
       await refreshMessages(selectedThreadId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send message.");
+      setError(err instanceof Error ? err.message : "發送訊息失敗。");
     } finally {
       setSubmittingMessage(false);
     }
@@ -179,7 +178,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   async function handleCreateDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!decisionTitle.trim() || !decisionSummary.trim()) {
-      setError("Decision title and summary are required.");
+      setError("決策標題與摘要為必填。");
       return;
     }
 
@@ -195,7 +194,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setDecisionSummary("");
       await refreshPanels();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create decision.");
+      setError(err instanceof Error ? err.message : "建立決策失敗。");
     } finally {
       setSubmittingDecision(false);
     }
@@ -210,7 +209,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         selectedThreadId ? refreshMessages(selectedThreadId) : Promise.resolve(),
       ]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to approve decision.");
+      setError(err instanceof Error ? err.message : "核准決策失敗。");
     }
   }
 
@@ -220,13 +219,13 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       await transitionMemory(memoryId, status);
       await refreshPanels();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update memory.");
+      setError(err instanceof Error ? err.message : "更新記憶失敗。");
     }
   }
 
   async function handleRunCoWork() {
     if (!selectedThreadId) {
-      setError("Select a chat session before running CoWork.");
+      setError("請先選擇聊天視窗再執行 CoWork。");
       return;
     }
 
@@ -234,15 +233,15 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setRunningCoWork(true);
       setError(null);
       const result = await runCoWork(selectedThreadId);
-      const providerLabel = result.provider_key ? ` via ${result.provider_key}` : "";
+      const providerLabel = result.provider_key ? `，來源：${result.provider_key}` : "";
       setCoworkStatus(
         result.deduplicated
-          ? `CoWork reused the latest analysis for this goal${providerLabel}.`
-          : `CoWork generated a fresh analysis and proposal${providerLabel}.`
+          ? `CoWork 已重用這個目標的最新分析${providerLabel}。`
+          : `CoWork 已產生新的分析與提案${providerLabel}。`
       );
       await Promise.all([refreshMessages(selectedThreadId), refreshPanels()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to run CoWork.");
+      setError(err instanceof Error ? err.message : "執行 CoWork 失敗。");
     } finally {
       setRunningCoWork(false);
     }
@@ -252,10 +251,10 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
     <main className="workspace-shell">
       <section className="workspace-header">
         <div>
-          <p className="eyebrow">Workspace</p>
+          <p className="eyebrow">工作空間</p>
           <h1>{project.name}</h1>
           <p className="summary">
-            {project.description || "Structured project workspace connected to the live CORTEX API."}
+            {project.description || "這是目前連接 CORTEX API 的結構化工作空間。"}
           </p>
         </div>
       </section>
@@ -263,30 +262,30 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       <section className="workspace-grid workspace-grid-wide">
         <aside className="panel sidebar stack-gap">
           <div className="panel-header">
-            <h2>Chat Sessions</h2>
-            <span>{chatSessions.length} total</span>
+            <h2>聊天視窗</h2>
+            <span>共 {chatSessions.length} 個</span>
           </div>
 
           <form className="stack-gap compact-form" onSubmit={handleCreateChatSession}>
             <label className="field">
-              <span>New session</span>
+              <span>新增視窗</span>
               <input
                 value={sessionTitle}
                 onChange={(event) => setSessionTitle(event.target.value)}
-                placeholder="Initial planning window"
+                placeholder="例如：主規劃視窗"
               />
             </label>
 
             <button className="secondary-button" disabled={submittingSession} type="submit">
-              {submittingSession ? "Creating..." : "Create Session"}
+              {submittingSession ? "建立中..." : "建立視窗"}
             </button>
           </form>
 
           <div className="thread-list">
-            {loadingSessions ? <p className="empty-state">Loading chat sessions...</p> : null}
+            {loadingSessions ? <p className="empty-state">正在載入聊天視窗...</p> : null}
 
             {!loadingSessions && chatSessions.length === 0 ? (
-              <p className="empty-state">No chat sessions yet.</p>
+              <p className="empty-state">目前還沒有聊天視窗。</p>
             ) : null}
 
             {chatSessions.map((session) => (
@@ -305,13 +304,13 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
         <section className="panel conversation stack-gap">
           <div className="panel-header">
-            <h2>{selectedSession?.title ?? "Group Chat"}</h2>
-            <span>{selectedSession ? selectedSession.status : "No session selected"}</span>
+            <h2>{selectedSession?.title ?? "群組對話"}</h2>
+            <span>{selectedSession ? selectedSession.status : "尚未選擇視窗"}</span>
           </div>
 
           <div className="inline-actions">
             <span className="mini-meta">
-              Run CoWork to analyze the latest user goal in this thread.
+              執行 CoWork，分析這個視窗中的最新使用者目標。
             </span>
             <button
               className="secondary-button"
@@ -319,7 +318,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
               onClick={() => void handleRunCoWork()}
               type="button"
             >
-              {runningCoWork ? "Running..." : "Run CoWork"}
+              {runningCoWork ? "執行中..." : "執行 CoWork"}
             </button>
           </div>
 
@@ -328,14 +327,14 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
           {error ? <p className="error-text">{error}</p> : null}
 
           <div className="message-stream">
-            {loadingMessages ? <p className="empty-state">Loading messages...</p> : null}
+            {loadingMessages ? <p className="empty-state">正在載入訊息...</p> : null}
 
             {!loadingMessages && !selectedSession ? (
-              <p className="empty-state">Create or select a chat session to begin.</p>
+              <p className="empty-state">請先建立或選擇聊天視窗。</p>
             ) : null}
 
             {!loadingMessages && selectedSession && messages.length === 0 ? (
-              <p className="empty-state">No messages yet. Send the first goal.</p>
+              <p className="empty-state">目前還沒有訊息，先送出第一個目標。</p>
             ) : null}
 
             {messages.map((message) => (
@@ -351,11 +350,11 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
           <form className="composer" onSubmit={handleCreateMessage}>
             <label className="field">
-              <span>Message</span>
+              <span>訊息</span>
               <textarea
                 disabled={!selectedSession}
                 onChange={(event) => setMessageDraft(event.target.value)}
-                placeholder="Describe the next goal or instruction for this chat session"
+                placeholder="描述這個聊天視窗中的下一個目標或指令"
                 rows={5}
                 value={messageDraft}
               />
@@ -366,7 +365,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
               disabled={!selectedSession || submittingMessage}
               type="submit"
             >
-              {submittingMessage ? "Sending..." : "Send Message"}
+              {submittingMessage ? "發送中..." : "發送訊息"}
             </button>
           </form>
         </section>
@@ -374,37 +373,37 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         <aside className="panel detail-sidebar stack-gap">
           <section className="stack-gap">
             <div className="panel-header">
-              <h2>Decisions</h2>
-              <span>{decisions.length} total</span>
+              <h2>決策</h2>
+              <span>共 {decisions.length} 筆</span>
             </div>
 
             <form className="compact-form" onSubmit={handleCreateDecision}>
               <label className="field">
-                <span>Decision title</span>
+                <span>決策標題</span>
                 <input
                   onChange={(event) => setDecisionTitle(event.target.value)}
-                  placeholder="Foundation next step"
+                  placeholder="例如：下一個核心步驟"
                   value={decisionTitle}
                 />
               </label>
 
               <label className="field">
-                <span>Summary</span>
+                <span>摘要</span>
                 <textarea
                   onChange={(event) => setDecisionSummary(event.target.value)}
-                  placeholder="Describe the decision clearly"
+                  placeholder="清楚描述這項決策"
                   rows={4}
                   value={decisionSummary}
                 />
               </label>
 
               <button className="secondary-button" disabled={submittingDecision} type="submit">
-                {submittingDecision ? "Creating..." : "Create Decision"}
+                {submittingDecision ? "建立中..." : "建立決策"}
               </button>
             </form>
 
             <div className="stack-gap">
-              {loadingPanels ? <p className="empty-state">Loading decisions...</p> : null}
+              {loadingPanels ? <p className="empty-state">正在載入決策...</p> : null}
               {decisions.map((decision) => (
                 <article className="message-card" key={decision.id}>
                   <div className="message-meta">
@@ -415,8 +414,8 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                   <div className="inline-actions">
                     <span className="mini-meta">
                       {decision.approved_by
-                        ? `Approved by ${decision.approved_by}`
-                        : `Proposed by ${decision.proposed_by ?? "unknown"}`}
+                        ? `核准者：${decision.approved_by}`
+                        : `提案者：${decision.proposed_by ?? "未知"}`}
                     </span>
                     {decision.status !== "approved" ? (
                       <button
@@ -424,7 +423,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                         onClick={() => void handleApproveDecision(decision.id)}
                         type="button"
                       >
-                        Approve
+                        核准
                       </button>
                     ) : null}
                   </div>
@@ -435,18 +434,18 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
           <section className="stack-gap">
             <div className="panel-header">
-              <h2>Roles</h2>
-              <span>{roles.length} total</span>
+              <h2>角色</h2>
+              <span>共 {roles.length} 個</span>
             </div>
             <div className="stack-gap">
-              {loadingPanels ? <p className="empty-state">Loading roles...</p> : null}
+              {loadingPanels ? <p className="empty-state">正在載入角色...</p> : null}
               {roles.map((role) => (
                 <article className="message-card" key={role.id}>
                   <div className="message-meta">
                     <strong>{role.name}</strong>
                     <span>{role.role_type}</span>
                   </div>
-                  <p>{role.description ?? "No description."}</p>
+                  <p>{role.description ?? "尚無描述。"}</p>
                 </article>
               ))}
             </div>
@@ -454,11 +453,11 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
           <section className="stack-gap">
             <div className="panel-header">
-              <h2>Constitution</h2>
-              <span>{rules.length} rules</span>
+              <h2>憲章規則</h2>
+              <span>共 {rules.length} 條</span>
             </div>
             <div className="stack-gap">
-              {loadingPanels ? <p className="empty-state">Loading rules...</p> : null}
+              {loadingPanels ? <p className="empty-state">正在載入規則...</p> : null}
               {rules.map((rule) => (
                 <article className="message-card" key={rule.id}>
                   <div className="message-meta">
@@ -473,11 +472,11 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
           <section className="stack-gap">
             <div className="panel-header">
-              <h2>Memory</h2>
-              <span>{memories.length} items</span>
+              <h2>記憶</h2>
+              <span>共 {memories.length} 筆</span>
             </div>
             <div className="stack-gap">
-              {loadingPanels ? <p className="empty-state">Loading memory...</p> : null}
+              {loadingPanels ? <p className="empty-state">正在載入記憶...</p> : null}
               {memories.map((memory) => (
                 <article className="message-card" key={memory.id}>
                   <div className="message-meta">
@@ -487,14 +486,14 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                   <p>{memory.content}</p>
                   <span className="mini-meta">
                     {memory.approved_by
-                      ? `Approved by ${memory.approved_by}`
-                      : "Awaiting approval metadata"}
+                      ? `核准者：${memory.approved_by}`
+                      : "等待核准資訊"}
                   </span>
                   <div className="inline-actions">
                     <span className="mini-meta">
                       {memory.source_decision_id
-                        ? `Decision ${memory.source_decision_id.slice(0, 8)}`
-                        : "Manual source"}
+                        ? `決策 ${memory.source_decision_id.slice(0, 8)}`
+                        : "手動來源"}
                     </span>
                     <div className="inline-actions">
                       {memory.status === "verified" ? (
@@ -503,7 +502,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                           onClick={() => void handleTransitionMemory(memory.id, "locked")}
                           type="button"
                         >
-                          Lock
+                          鎖定
                         </button>
                       ) : null}
                       {memory.status === "draft" ? (
@@ -512,7 +511,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                           onClick={() => void handleTransitionMemory(memory.id, "verified")}
                           type="button"
                         >
-                          Verify
+                          驗證
                         </button>
                       ) : null}
                       {memory.status !== "archived" ? (
@@ -521,7 +520,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                           onClick={() => void handleTransitionMemory(memory.id, "archived")}
                           type="button"
                         >
-                          Archive
+                          封存
                         </button>
                       ) : null}
                     </div>

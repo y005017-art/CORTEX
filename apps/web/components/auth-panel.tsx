@@ -30,7 +30,7 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
       storeSession(session.token, session.user);
       onAuthenticated(session.user);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Authentication failed.");
+      setError(err instanceof Error ? err.message : "驗證失敗。");
     } finally {
       setSubmitting(false);
     }
@@ -39,25 +39,25 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
   return (
     <section className="panel stack-gap">
       <div className="panel-header">
-        <h2>{mode === "login" ? "Sign In" : "Register"}</h2>
-        <span>Local auth</span>
+        <h2>{mode === "login" ? "登入" : "註冊"}</h2>
+        <span>本機驗證</span>
       </div>
 
       <form className="stack-gap" onSubmit={handleSubmit}>
         {mode === "register" ? (
           <label className="field">
-            <span>Display name</span>
+            <span>顯示名稱</span>
             <input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
           </label>
         ) : null}
 
         <label className="field">
-          <span>Email</span>
+          <span>電子郵件</span>
           <input value={email} onChange={(event) => setEmail(event.target.value)} />
         </label>
 
         <label className="field">
-          <span>Password</span>
+          <span>密碼</span>
           <input
             type="password"
             value={password}
@@ -69,10 +69,10 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
 
         <button className="primary-button" disabled={submitting} type="submit">
           {submitting
-            ? "Working..."
+            ? "處理中..."
             : mode === "login"
-              ? "Sign In"
-              : "Create Account"}
+              ? "登入"
+              : "建立帳號"}
         </button>
       </form>
 
@@ -81,7 +81,7 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
         onClick={() => setMode(mode === "login" ? "register" : "login")}
         type="button"
       >
-        {mode === "login" ? "Need an account? Register" : "Already have an account? Sign in"}
+        {mode === "login" ? "還沒有帳號？前往註冊" : "已經有帳號？前往登入"}
       </button>
     </section>
   );

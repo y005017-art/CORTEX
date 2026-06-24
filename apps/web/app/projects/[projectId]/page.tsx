@@ -14,7 +14,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
     <>
       <div className="back-link-row">
         <Link className="back-link" href="/">
-          Back to dashboard
+          返回首頁
         </Link>
       </div>
       <WorkspaceRouteClient projectId={projectId} />

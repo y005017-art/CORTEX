@@ -19,7 +19,7 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
   useEffect(() => {
     async function loadProject() {
       if (!getStoredToken()) {
-        setError("Sign in from the dashboard before opening a workspace.");
+        setError("請先從首頁登入，再進入工作空間。");
         setLoading(false);
         return;
       }
@@ -29,12 +29,12 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
         const projects = await listProjects();
         const match = projects.find((entry) => entry.id === projectId) ?? null;
         if (!match) {
-          setError("Project not found.");
+          setError("找不到專案。");
           return;
         }
         setProject(match);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load project.");
+        setError(err instanceof Error ? err.message : "載入專案失敗。");
       } finally {
         setLoading(false);
       }
@@ -47,7 +47,7 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
     return (
       <main className="workspace-shell">
         <section className="panel">
-          <p className="empty-state">Loading workspace...</p>
+          <p className="empty-state">正在載入工作空間...</p>
         </section>
       </main>
     );
@@ -57,7 +57,7 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
     return (
       <main className="workspace-shell">
         <section className="panel">
-          <p className="error-text">{error ?? "Project not found."}</p>
+          <p className="error-text">{error ?? "找不到專案。"}</p>
         </section>
       </main>
     );

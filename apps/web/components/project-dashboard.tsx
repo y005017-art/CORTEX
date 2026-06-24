@@ -30,7 +30,7 @@ export function ProjectDashboard() {
       const data = await listProjects();
       setProjects(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load projects.");
+      setError(err instanceof Error ? err.message : "載入專案失敗。");
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ export function ProjectDashboard() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!name.trim()) {
-      setError("Project name is required.");
+      setError("專案名稱為必填。");
       return;
     }
 
@@ -75,7 +75,7 @@ export function ProjectDashboard() {
       setDescription("");
       await loadProjects();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create project.");
+      setError(err instanceof Error ? err.message : "建立專案失敗。");
     } finally {
       setSubmitting(false);
     }
@@ -85,11 +85,10 @@ export function ProjectDashboard() {
     <main className="dashboard-shell">
       <section className="dashboard-hero">
         <div>
-          <p className="eyebrow">CORTEX Foundation</p>
-          <h1>Workspace Bootstrap</h1>
+          <p className="eyebrow">CORTEX 基礎版</p>
+          <h1>工作平台入口</h1>
           <p className="summary">
-            Create a project, open its workspace, and start the first structured
-            thread against the live API skeleton.
+            建立專案、進入工作空間，並從第一個結構化聊天視窗開始推進工作。
           </p>
         </div>
       </section>
@@ -99,12 +98,11 @@ export function ProjectDashboard() {
           {currentUser ? (
             <section className="panel stack-gap">
               <div className="panel-header">
-                <h2>Session</h2>
+                <h2>登入狀態</h2>
                 <span>{currentUser.display_name}</span>
               </div>
               <p className="summary compact-summary">
-                Authenticated as {currentUser.email}. Protected workspace routes
-                are enabled.
+                目前登入帳號為 {currentUser.email}。已可使用受保護的工作空間功能。
               </p>
               <button
                 className="secondary-button"
@@ -115,65 +113,65 @@ export function ProjectDashboard() {
                 }}
                 type="button"
               >
-                Sign Out
+                登出
               </button>
             </section>
           ) : (
             <AuthPanel onAuthenticated={setCurrentUser} />
           )}
 
-        <form className="panel stack-gap" onSubmit={handleSubmit}>
-          <div className="panel-header">
-            <h2>Create Project</h2>
-            <span>Projects API</span>
-          </div>
+          <form className="panel stack-gap" onSubmit={handleSubmit}>
+            <div className="panel-header">
+              <h2>建立專案</h2>
+              <span>專案管理</span>
+            </div>
 
-          <label className="field">
-            <span>Name</span>
-            <input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="CORTEX Core MVP"
-            />
-          </label>
+            <label className="field">
+              <span>名稱</span>
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="CORTEX 核心 MVP"
+              />
+            </label>
 
-          <label className="field">
-            <span>Description</span>
-            <textarea
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-              placeholder="Foundation validation or active product work"
-              rows={4}
-            />
-          </label>
+            <label className="field">
+              <span>描述</span>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="可填入目前目標、驗證內容或正在進行的產品工作"
+                rows={4}
+              />
+            </label>
 
-          {error ? <p className="error-text">{error}</p> : null}
+            {error ? <p className="error-text">{error}</p> : null}
 
-          <button
-            className="primary-button"
-            disabled={submitting || !currentUser}
-            type="submit"
-          >
-            {submitting ? "Creating..." : "Create Project"}
-          </button>
-        </form>
+            <button
+              className="primary-button"
+              disabled={submitting || !currentUser}
+              type="submit"
+            >
+              {submitting ? "建立中..." : "建立專案"}
+            </button>
+          </form>
         </div>
 
         <section className="panel stack-gap">
           <div className="panel-header">
-            <h2>Projects</h2>
-            <span>{loading ? "Loading" : `${projects.length} total`}</span>
+            <h2>專案清單</h2>
+            <span>{loading ? "載入中" : `共 ${projects.length} 個`}</span>
           </div>
 
           <div className="project-list">
-            {loading ? <p className="empty-state">Loading projects...</p> : null}
+            {loading ? <p className="empty-state">正在載入專案...</p> : null}
 
             {!loading && currentUser && projects.length === 0 ? (
-              <p className="empty-state">No projects yet. Create the first one.</p>
+              <p className="empty-state">目前還沒有專案，先建立第一個專案。</p>
             ) : null}
 
             {!loading && !currentUser ? (
-              <p className="empty-state">Sign in to load protected projects.</p>
+              <p className="empty-state">請先登入以讀取受保護的專案。</p>
             ) : null}
 
             {projects.map((project) => (
@@ -186,7 +184,7 @@ export function ProjectDashboard() {
                   <strong>{project.name}</strong>
                   <span>{project.status}</span>
                 </div>
-                <p>{project.description || "No description yet."}</p>
+                <p>{project.description || "尚未填寫描述。"}</p>
               </Link>
             ))}
           </div>
