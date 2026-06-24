@@ -653,3 +653,45 @@ Do not overwrite previous entries unless they are factually incorrect.
   - `WARN` paths are not yet modeled as a distinct runtime branch
 - Next recommended step:
   - Wire live OpenAI execution behind the adapter boundary under the new policy precheck path, or start converting policy decisions from hard-coded logic into rule-driven evaluation inputs
+
+## Session Entry
+
+- Date: 2026-06-24
+- Session focus: Live OpenAI adapter execution path
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added the official OpenAI Python SDK to the API environment and project requirements
+  - Implemented `OpenAIAdapter.send_message()` through the Responses API using structured parsing
+  - Implemented `OpenAIAdapter.embed()` and a basic provider tool-call execution path
+  - Added configuration for `OPENAI_MODEL` and `OPENAI_EMBEDDING_MODEL`
+  - Updated provider health reporting so OpenAI becomes available when `OPENAI_API_KEY` is configured
+- In progress:
+  - CORTEX can now execute a real OpenAI provider path once an API key is supplied, while keeping deterministic as the current safe default
+- Blockers:
+  - Live end-to-end OpenAI execution could not be called against the external API in this session because `OPENAI_API_KEY` is not configured in the local environment
+- Decisions made:
+  - Use the OpenAI Responses API with structured parsing instead of prompt-only JSON extraction
+  - Keep the default OpenAI model configurable, with `gpt-5.5` as the current default target
+  - Keep deterministic as the active default provider until explicit provider switching is requested
+- Files created:
+  - None
+- Files updated:
+  - `apps/api/requirements.txt`
+  - `apps/api/app/core/config.py`
+  - `apps/api/app/providers/openai_adapter.py`
+  - `apps/api/README.md`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `py -m compileall app`
+  - `npm run build`
+  - Local deploy verification at `http://127.0.0.1:8000/health`
+  - Local deploy verification at `http://127.0.0.1:3000`
+  - Adapter smoke test with a mocked OpenAI client covering `send_message`, `embed`, `tool_call`, and `health`
+  - API verification that `GET /providers` reports OpenAI as unavailable without `OPENAI_API_KEY`
+  - API verification that `POST /providers/openai/validate` returns `409` with `PR-001` when the key is absent
+- Known risks:
+  - Live OpenAI execution has not yet been externally exercised with a real API key in this environment
+  - `stream_message()` currently degrades to a one-shot response instead of true incremental streaming
+  - Provider selection remains configuration-driven rather than user-selectable in the workspace
+- Next recommended step:
+  - Configure `OPENAI_API_KEY` and run a live end-to-end CoWork execution on the OpenAI provider, or add workspace-level provider selection controls before broader role orchestration
