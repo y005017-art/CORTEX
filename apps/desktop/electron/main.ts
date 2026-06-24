@@ -196,6 +196,11 @@ ipcMain.handle("workbench:get-bootstrap", () => ({
 
 ipcMain.handle("workbench:get-view-statuses", () => Array.from(lastStatuses.values()));
 
+ipcMain.handle("workbench:open-external", async (_event, url: string) => {
+  appendRuntimeLog(`external-open | ${url}`);
+  await shell.openExternal(url);
+});
+
 ipcMain.handle(
   "workbench:request",
   async (

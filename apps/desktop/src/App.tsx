@@ -23,6 +23,7 @@ type ProviderConfig = {
   key: ProviderKey;
   label: string;
   url: string;
+  loginUrl: string;
   description: string;
   colorClass: string;
 };
@@ -31,6 +32,7 @@ type ProviderAccount = {
   provider: ProviderKey;
   connected: boolean;
   remembered: boolean;
+  lastOpenedAt: string | null;
 };
 
 type SkillEntry = {
@@ -55,31 +57,120 @@ const PROVIDERS: ProviderConfig[] = [
     key: "chatgpt",
     label: "ChatGPT",
     url: "https://chatgpt.com/",
-    description: "適合架構、發想、文件與全域協作推進。",
+    loginUrl: "https://chatgpt.com/auth/login",
+    description: "適合架構設計、產品拆解、文件整理與全域協作推進。",
     colorClass: "provider-chatgpt",
   },
   {
     key: "claude",
     label: "Claude",
     url: "https://claude.ai/",
-    description: "適合工程拆解、長文分析、重構與實作細節。",
+    loginUrl: "https://claude.ai/login",
+    description: "適合工程實作、重構、長文分析與技術細節處理。",
     colorClass: "provider-claude",
   },
   {
     key: "gemini",
     label: "Gemini",
     url: "https://gemini.google.com/",
-    description: "適合檢核、補充觀點、研究整合與審查。",
+    loginUrl: "https://gemini.google.com/",
+    description: "適合審查、交叉驗證、研究整合與品質檢核。",
     colorClass: "provider-gemini",
   },
   {
     key: "perplexity",
     label: "Perplexity",
     url: "https://www.perplexity.ai/",
-    description: "適合專案管理、快速查詢、資訊彙整與外部脈絡。",
+    loginUrl: "https://www.perplexity.ai/",
+    description: "適合專案管理、外部資訊查詢、任務推進與整理脈絡。",
     colorClass: "provider-perplexity",
   },
 ];
+
+const SIDEBAR_ITEMS: Array<{ id: SidebarPage; label: string; icon: string }> = [
+  { id: "workspace", label: "工作台", icon: "台" },
+  { id: "pinned", label: "常駐區", icon: "常" },
+  { id: "skills", label: "技能庫", icon: "技" },
+  { id: "roles", label: "角色庫", icon: "角" },
+  { id: "console", label: "主控台", icon: "控" },
+];
+
+const SKILLS: SkillEntry[] = [
+  {
+    id: "cowork",
+    name: "CoWork 協作區",
+    summary: "所有角色共同討論、交接、同步決策的主通道。",
+    detail: "CoWork 是必要常駐區，不是附屬功能。任何角色的討論、風險、下一步都應該能回到這裡整合。",
+    tags: ["必要", "協作", "交接"],
+  },
+  {
+    id: "decision-board",
+    name: "Decision Board",
+    summary: "收攏批准、待確認與退回的專案決策。",
+    detail: "Decision Board 負責保存角色間的重要決策，避免它們散落在各個外部聊天工作視窗中。",
+    tags: ["治理", "決策", "追蹤"],
+  },
+  {
+    id: "memory-snapshot",
+    name: "Memory Snapshot",
+    summary: "保存目標、背景、技術選型與上下文。",
+    detail: "讓新加入角色或切換預設 AI 時，仍能快速承接目前專案的背景與已鎖定資訊。",
+    tags: ["記憶", "同步", "脈絡"],
+  },
+  {
+    id: "handover",
+    name: "Handover 交接",
+    summary: "把下一步、未完成事項與風險交給下一位角色。",
+    detail: "任何角色退出當前回合之前，都應留下可被接手的摘要，而不是讓上下文中斷。",
+    tags: ["交接", "節點", "延續"],
+  },
+];
+
+const DEFAULT_ROLE_LIBRARY: RoleEntry[] = [
+  {
+    id: "architect",
+    name: "Architect",
+    provider: "chatgpt",
+    summary: "負責定義產品結構、系統邊界與工作節奏。",
+    detail: "Architect 角色聚焦架構設計、工作台規劃、角色分工與決策節點安排。",
+    pinned: false,
+  },
+  {
+    id: "engineer",
+    name: "Engineer",
+    provider: "claude",
+    summary: "負責實作、重構、整合與處理技術風險。",
+    detail: "Engineer 是主要執行者，會深入程式碼與資料流，把需求落成可運作功能。",
+    pinned: false,
+  },
+  {
+    id: "reviewer",
+    name: "Reviewer",
+    provider: "gemini",
+    summary: "負責風險審查、品質把關與回歸檢查。",
+    detail: "Reviewer 不是附庸，而是獨立角色，專門檢查需求、架構與實作是否偏離。",
+    pinned: false,
+  },
+  {
+    id: "pm",
+    name: "PM",
+    provider: "perplexity",
+    summary: "負責節奏推進、外部脈絡與需求整合。",
+    detail: "PM 角色關注專案里程碑、跨角色同步、外部資訊整理與下一步規劃。",
+    pinned: false,
+  },
+];
+
+const STATUS_COLORS: Record<ViewStatus["state"], string> = {
+  loading: "is-loading",
+  ready: "is-ready",
+  failed: "is-failed",
+};
+
+const ACCOUNTS_STORAGE_KEY = "cortex.desktop.accounts";
+const DEFAULT_PROVIDER_STORAGE_KEY = "cortex.desktop.defaultProvider";
+const PINNED_ROLES_STORAGE_KEY = "cortex.desktop.pinnedRoles";
+const PROVIDER_OVERRIDE_STORAGE_KEY = "cortex.desktop.providerOverrides";
 
 const MOCK_BOOTSTRAP: BootstrapConfig = {
   apiBaseUrl: "http://127.0.0.1:8000",
@@ -94,14 +185,14 @@ const MOCK_PROJECTS: Project[] = [
   {
     id: "demo-project",
     name: "CORTEX Workspace 重構",
-    description: "把現有介面整理成 VS Code 風格 AI IDE 工作台。",
+    description: "把現有介面改成 VS Code 風格 AI IDE 工作台。",
     status: "進行中",
     created_at: "2026-06-24T10:00:00Z",
   },
   {
     id: "demo-project-2",
-    name: "角色治理實驗",
-    description: "驗證角色常駐區、技能庫與治理側欄的配置方式。",
+    name: "多角色治理驗證",
+    description: "驗證角色常駐區、技能庫與治理側欄的排版與流程。",
     status: "規劃中",
     created_at: "2026-06-24T09:00:00Z",
   },
@@ -169,24 +260,17 @@ const MOCK_SESSIONS: ChatSession[] = [
 const MOCK_DECISIONS: Decision[] = [
   {
     id: "decision-1",
-    title: "採用 Electron workbench shell",
-    summary: "避免 iframe 限制，改由真實外部聊天工作視窗承接每個角色。",
+    title: "採用 Electron 工作台殼層",
+    summary: "避免 iframe 限制，每個角色改為真實外部聊天工作視窗。",
     status: "approved",
     created_at: "2026-06-24T11:35:00Z",
   },
   {
     id: "decision-2",
     title: "CoWork 作為必要常駐區",
-    summary: "所有角色必須同時參與 CoWork，不能再把它放成次要附屬區塊。",
+    summary: "所有角色都必須回到 CoWork 同步進度與交接。",
     status: "pending",
     created_at: "2026-06-24T11:28:00Z",
-  },
-  {
-    id: "decision-3",
-    title: "先完成工作台骨架",
-    summary: "本階段先把登入流程、角色庫、技能庫與治理欄介面全部定型。",
-    status: "approved",
-    created_at: "2026-06-24T11:20:00Z",
   },
 ];
 
@@ -202,7 +286,7 @@ const MOCK_MEMORIES: Memory[] = [
     id: "memory-2",
     memory_type: "Architecture",
     status: "active",
-    content: "每個角色透過 Electron WebContentsView 載入真實外部聊天工作區。",
+    content: "每個角色透過獨立工作視窗載入外部 AI 聊天站點。",
     created_at: "2026-06-24T11:05:00Z",
   },
 ];
@@ -211,110 +295,18 @@ const MOCK_RULES: ConstitutionRule[] = [
   {
     id: "rule-1",
     rule_code: "ROLE-001",
-    name: "角色真實工作視窗",
-    description: "角色不得退化為假卡片或自製聊天框，必須對應真實工作視窗。",
+    name: "角色必須對應真實工作視窗",
+    description: "不得退回假卡片或自製聊天框，必須讓角色有真實外部聊天工作區。",
     severity: "high",
   },
   {
     id: "rule-2",
     rule_code: "GOV-001",
-    name: "治理資訊可回看",
-    description: "決策、記憶與憲章必須有固定側欄位置，不能散落在多個頁面。",
-    severity: "high",
-  },
-  {
-    id: "rule-3",
-    rule_code: "COWORK-001",
-    name: "CoWork 常駐",
-    description: "所有參與專案的角色都應可在 CoWork 同步進度與交接。",
+    name: "治理資訊固定可回看",
+    description: "決策、記憶與憲章需要有固定位置，避免散落在不同頁面。",
     severity: "high",
   },
 ];
-
-const SIDEBAR_ITEMS: Array<{ id: SidebarPage; label: string; icon: string }> = [
-  { id: "workspace", label: "工作台", icon: "台" },
-  { id: "pinned", label: "常駐角色", icon: "常" },
-  { id: "skills", label: "技能庫", icon: "技" },
-  { id: "roles", label: "角色庫", icon: "角" },
-  { id: "console", label: "主控台", icon: "控" },
-];
-
-const SKILLS: SkillEntry[] = [
-  {
-    id: "cowork",
-    name: "CoWork 協作",
-    summary: "所有參與角色共同討論、追蹤決策與交接的主通道。",
-    detail: "CoWork 是必要常駐能力。它不是附屬訊息框，而是所有角色同步狀態、發出 handover、確認決策與追蹤未完成工作的主會議室。",
-    tags: ["必要", "協作", "交接"],
-  },
-  {
-    id: "decision-board",
-    name: "Decision Board",
-    summary: "沉澱批准中、待確認、已退回的關鍵決策。",
-    detail: "讓 Architect、Engineer、Reviewer、PM 的重要判斷有去有回，避免口頭結論散落在不同聊天頁面中。",
-    tags: ["治理", "決策", "追蹤"],
-  },
-  {
-    id: "memory-snapshot",
-    name: "Memory Snapshot",
-    summary: "保存專案目標、技術選型、里程碑與鎖定背景。",
-    detail: "把已確認的資訊轉成可回看的專案記憶，讓新加入角色或切換 AI 時仍能快速對齊脈絡。",
-    tags: ["記憶", "同步", "脈絡"],
-  },
-  {
-    id: "handover",
-    name: "Handover 交接",
-    summary: "在階段切換時留下下一步、風險與待辦。",
-    detail: "任何角色離開當前回合之前，都應能透過交接卡片把上下文移交給下一位執行者。",
-    tags: ["交接", "節點", "延續"],
-  },
-];
-
-const DEFAULT_ROLE_LIBRARY: RoleEntry[] = [
-  {
-    id: "architect",
-    name: "Architect",
-    provider: "chatgpt",
-    summary: "定義產品結構、模組邊界、治理方式與整體節奏。",
-    detail: "Architect 角色負責把模糊需求轉成工作架構，對齊整體工作台、資料結構、角色分工與決策節點。",
-    pinned: false,
-  },
-  {
-    id: "engineer",
-    name: "Engineer",
-    provider: "claude",
-    summary: "負責實作、拆解、整合與處理技術風險。",
-    detail: "Engineer 角色會深入程式碼、建立功能切片、處理資料流、介面互動與技術驗證，是主要執行者。",
-    pinned: false,
-  },
-  {
-    id: "reviewer",
-    name: "Reviewer",
-    provider: "gemini",
-    summary: "負責審查風險、品質、測試缺口與回歸問題。",
-    detail: "Reviewer 角色不是附庸，而是獨立工作視窗中的品質守門員，會檢查實作是否偏離需求與架構。",
-    pinned: false,
-  },
-  {
-    id: "pm",
-    name: "PM",
-    provider: "perplexity",
-    summary: "負責推進節奏、整理需求、確認里程碑與外部資訊。",
-    detail: "PM 角色關注專案節奏、需求切割、跨角色溝通與必要對外資訊收斂，確保工作不失焦。",
-    pinned: false,
-  },
-];
-
-const STATUS_COLORS: Record<ViewStatus["state"], string> = {
-  loading: "is-loading",
-  ready: "is-ready",
-  failed: "is-failed",
-};
-
-const ACCOUNTS_STORAGE_KEY = "cortex.desktop.accounts";
-const DEFAULT_PROVIDER_STORAGE_KEY = "cortex.desktop.defaultProvider";
-const PINNED_ROLES_STORAGE_KEY = "cortex.desktop.pinnedRoles";
-const PROVIDER_OVERRIDE_STORAGE_KEY = "cortex.desktop.providerOverrides";
 
 function providerFromSession(session: ChatSession): ProviderKey {
   const source = `${session.provider_site ?? ""} ${session.workspace_url ?? ""}`.toLowerCase();
@@ -363,6 +355,14 @@ function formatClock(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+  }).format(new Date(value));
+}
+
+function formatLongDate(value: string) {
+  return new Intl.DateTimeFormat("zh-TW", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   }).format(new Date(value));
 }
 
@@ -443,8 +443,8 @@ export function App() {
   const [bottomTab, setBottomTab] = useState<BottomTab>("cowork");
   const [primarySessionId, setPrimarySessionId] = useState("");
   const [secondarySessionId, setSecondarySessionId] = useState("");
-  const [selectedSkillId, setSelectedSkillId] = useState(SKILLS[0]?.id ?? "");
-  const [selectedRoleLibraryId, setSelectedRoleLibraryId] = useState(DEFAULT_ROLE_LIBRARY[0]?.id ?? "");
+  const [selectedSkillId, setSelectedSkillId] = useState(SKILLS[0].id);
+  const [selectedRoleLibraryId, setSelectedRoleLibraryId] = useState(DEFAULT_ROLE_LIBRARY[0].id);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -454,6 +454,7 @@ export function App() {
       provider: provider.key,
       connected: false,
       remembered: false,
+      lastOpenedAt: null,
     }))
   );
   const [defaultProvider, setDefaultProvider] = useState<ProviderKey>("chatgpt");
@@ -481,6 +482,7 @@ export function App() {
       window.localStorage.getItem(ACCOUNTS_STORAGE_KEY),
       []
     );
+
     if (storedAccounts.length > 0) {
       setAccounts(
         PROVIDERS.map((provider) => {
@@ -490,6 +492,7 @@ export function App() {
               provider: provider.key,
               connected: false,
               remembered: false,
+              lastOpenedAt: null,
             }
           );
         })
@@ -591,8 +594,8 @@ export function App() {
           id: sessionRoleKey(session),
           name: sessionDisplayTitle(session),
           provider: inferredProvider,
-          summary: `${providerConfig(inferredProvider).label} 擔任的角色工作視窗。`,
-          detail: `${sessionDisplayTitle(session)} 目前會載入真實外部聊天工作區，供該角色獨立思考、討論與交接。`,
+          summary: `${providerConfig(inferredProvider).label} 擔任的外部工作角色。`,
+          detail: `${sessionDisplayTitle(session)} 會載入真實聊天工作視窗，供該角色獨立思考與交接。`,
           pinned: false,
         });
       }
@@ -619,7 +622,7 @@ export function App() {
 
   const coworkMessages = useMemo(() => {
     if (decisions.length > 0) {
-      return decisions.slice(0, 6).map((decision, index) => ({
+      return decisions.map((decision, index) => ({
         id: decision.id,
         author: bindableSessions[index % Math.max(bindableSessions.length, 1)]?.title ?? "CoWork",
         time: formatClock(decision.created_at),
@@ -629,49 +632,56 @@ export function App() {
 
     return [
       {
-        id: "cowork-default-1",
+        id: "cowork-1",
         author: "Architect",
         time: "11:40",
-        body: "我已經整理好工作台方向，請各角色在真實工作視窗中同步推進並回報決策。",
+        body: "我已把工作台方向整理成 Electron workbench，請各角色對齊工作方式。",
       },
       {
-        id: "cowork-default-2",
+        id: "cowork-2",
         author: "Engineer",
         time: "11:42",
-        body: "收到，將先確認 Electron shell、分割工作區與角色切換介面是否對齊。",
+        body: "收到，會先驗證登入流程、專案選擇與角色工作視窗的進入路徑。",
       },
       {
-        id: "cowork-default-3",
+        id: "cowork-3",
         author: "Reviewer",
         time: "11:44",
-        body: "我會追蹤 UI 是否偏離需求，並在關鍵節點補上風險提醒與缺口。",
-      },
-      {
-        id: "cowork-default-4",
-        author: "PM",
-        time: "11:45",
-        body: "會把需求、下一步與交接節點維持在同一個協作區，避免各角色失聯。",
+        body: "我會盯 UI 是否偏離需求，尤其是不要再回到假聊天與儀表板畫面。",
       },
     ];
   }, [bindableSessions, decisions]);
 
   const consoleLines = useMemo(
     () => [
-      "桌面殼層已啟動。",
-      "這個頁面將取代獨立黑窗，後續會整合啟動訊息、服務狀態與錯誤紀錄。",
-      bootstrap?.runtimeLogPath ? `執行紀錄位置：${bootstrap.runtimeLogPath}` : "等待讀取執行紀錄位置。",
-      activeProject ? `目前專案：${activeProject.name}` : "尚未選擇專案。",
-      `${connectedAccounts.length} 個 AI 帳號已標記為可用。`,
+      "桌面工作台已啟動。",
+      "AI 帳號頁現在會提供真實登入入口按鈕。",
+      "專案選擇頁已改成固定版型與可捲動區域。",
+      bootstrap?.runtimeLogPath
+        ? `執行紀錄位置：${bootstrap.runtimeLogPath}`
+        : "等待讀取執行紀錄位置。",
     ],
-    [activeProject, bootstrap?.runtimeLogPath, connectedAccounts.length]
+    [bootstrap?.runtimeLogPath]
   );
 
   function resolvedProvider(session: ChatSession): ProviderKey {
-    return providerOverrides[session.id] ?? defaultProvider ?? providerFromSession(session);
+    return providerOverrides[session.id] ?? providerFromSession(session);
   }
 
   function resolvedWorkspaceUrl(session: ChatSession): string {
-    return providerConfig(resolvedProvider(session)).url;
+    const provider = resolvedProvider(session);
+    if (connectedAccounts.length === 0) {
+      return providerConfig(provider).url;
+    }
+    return providerConfig(provider).url;
+  }
+
+  async function openExternalUrl(url: string) {
+    if (desktopBridge?.openExternal) {
+      await desktopBridge.openExternal(url);
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -689,7 +699,6 @@ export function App() {
         method: "POST",
         body: { email, password },
       });
-
       setToken(session.token);
       setMessage(`已登入 CORTEX，歡迎回來，${session.user.display_name}。`);
       setStage("accounts");
@@ -712,8 +721,8 @@ export function App() {
         token,
       });
       setProjects(nextProjects);
-      if (!selectedProjectId && (bootstrap.defaultProjectId || nextProjects[0]?.id)) {
-        setSelectedProjectId(bootstrap.defaultProjectId || nextProjects[0]!.id);
+      if (!selectedProjectId && nextProjects[0]) {
+        setSelectedProjectId(nextProjects[0].id);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "讀取專案失敗。");
@@ -728,7 +737,6 @@ export function App() {
     try {
       setIsLoadingWorkspace(true);
       setError(null);
-
       const [sessionData, decisionData, memoryData, ruleData] = await Promise.all([
         request<ChatSession[]>({
           baseUrl: bootstrap.apiBaseUrl,
@@ -756,17 +764,7 @@ export function App() {
       setDecisions(decisionData);
       setMemories(memoryData);
       setRules(ruleData);
-      setMessage(`已載入專案工作區：${sessionData.length} 個角色工作視窗。`);
-
-      setProviderOverrides((current) => {
-        const next = { ...current };
-        for (const session of sessionData) {
-          if (!next[session.id]) {
-            next[session.id] = providerFromSession(session);
-          }
-        }
-        return next;
-      });
+      setMessage(`已載入專案工作區，共 ${sessionData.length} 個角色工作視窗。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "載入工作區失敗。");
     } finally {
@@ -819,7 +817,6 @@ export function App() {
 
     collectPane("primary", primarySession, primaryViewportRef.current);
     collectPane("secondary", secondarySession, secondaryViewportRef.current);
-
     return panes;
   }
 
@@ -841,17 +838,27 @@ export function App() {
       observer.disconnect();
       window.removeEventListener("resize", sync);
     };
-  }, [desktopBridge, stage, primarySession, secondarySession, providerOverrides, defaultProvider]);
+  }, [desktopBridge, stage, primarySession, secondarySession, providerOverrides]);
 
-  function toggleAccount(provider: ProviderKey) {
+  async function handleAccountEntry(provider: ProviderKey) {
+    const target = providerConfig(provider);
+    await openExternalUrl(target.loginUrl);
+    const now = new Date().toISOString();
     setAccounts((current) =>
       current.map((account) =>
         account.provider === provider
-          ? {
-              ...account,
-              connected: !account.connected,
-              remembered: !account.connected || account.remembered,
-            }
+          ? { ...account, lastOpenedAt: now }
+          : account
+      )
+    );
+    setMessage(`已開啟 ${target.label} 登入頁，請完成登入後回到這裡確認。`);
+  }
+
+  function confirmAccount(provider: ProviderKey) {
+    setAccounts((current) =>
+      current.map((account) =>
+        account.provider === provider
+          ? { ...account, connected: true, remembered: true }
           : account
       )
     );
@@ -859,43 +866,41 @@ export function App() {
 
   function continueToProjects() {
     if (connectedAccounts.length === 0) {
-      setError("至少要標記一個可用的 AI 帳號，才能進入專案選擇。");
+      setError("至少要完成一個 AI 帳號登入，才能進入專案選擇。");
       return;
     }
-
     setError(null);
     setStage("project");
   }
 
   function enterWorkspace() {
     if (!selectedProjectId) {
-      setError("請先選擇一個專案。");
+      setError("請先選擇要載入的專案。");
       return;
     }
-
     setError(null);
     setStage("workspace");
   }
 
   function togglePinnedRole(roleId: string) {
     setPinnedRoleIds((current) => {
-      const nextSet = new Set(current);
-      if (nextSet.has(roleId)) {
-        nextSet.delete(roleId);
+      const next = new Set(current);
+      if (next.has(roleId)) {
+        next.delete(roleId);
       } else {
-        nextSet.add(roleId);
+        next.add(roleId);
       }
-      nextSet.add("cowork");
-      return Array.from(nextSet);
+      next.add("cowork");
+      return Array.from(next);
     });
   }
 
   function setPaneSession(paneId: PaneId, sessionId: string) {
     if (paneId === "primary") {
       setPrimarySessionId(sessionId);
-      return;
+    } else {
+      setSecondarySessionId(sessionId);
     }
-    setSecondarySessionId(sessionId);
   }
 
   function setSessionProvider(sessionId: string, provider: ProviderKey) {
@@ -914,7 +919,7 @@ export function App() {
               <span className="hero-kicker">CORTEX AI IDE</span>
               <h1>先登入 CORTEX，然後再進入真正的多角色工作台。</h1>
               <p>
-                這裡不是 dashboard，也不是假聊天畫面。登入後會依序進入 AI 帳號設定、專案選擇，最後才進入完整工作區。
+                這裡不是 dashboard，也不是假聊天畫面。登入後會依序進入 AI 帳號登入、專案選擇，最後才進入完整工作區。
               </p>
             </div>
             <form className="login-card" onSubmit={handleLogin}>
@@ -951,56 +956,101 @@ export function App() {
     if (stage === "accounts") {
       return (
         <section className="onboarding-screen">
-          <div className="flow-shell">
+          <div className="flow-shell accounts-shell">
             <div className="flow-header">
               <div>
                 <span className="hero-kicker">第二步</span>
-                <h2>登入至少一個 AI 帳號，並選擇預設載入來源。</h2>
+                <h2>開啟真實登入頁，至少完成一個 AI 帳號登入。</h2>
               </div>
               <button className="ghost-action" onClick={continueToProjects} type="button">
                 下一步：選擇專案
               </button>
             </div>
 
-            <div className="account-grid">
-              {PROVIDERS.map((provider) => {
-                const account = accounts.find((entry) => entry.provider === provider.key);
-                const isDefault = defaultProvider === provider.key;
-                return (
-                  <article className="account-card" key={provider.key}>
-                    <div className="card-head">
-                      <strong>{provider.label}</strong>
-                      <span>{account?.connected ? "已標記可用" : "尚未標記"}</span>
-                    </div>
-                    <p>{provider.description}</p>
-                    <div className="account-actions">
-                      <button
-                        className={account?.connected ? "secondary-action is-active" : "secondary-action"}
-                        onClick={() => toggleAccount(provider.key)}
-                        type="button"
-                      >
-                        {account?.connected ? "已登入並記住" : "標記為已登入"}
-                      </button>
-                      <label className="default-choice">
-                        <input
-                          checked={isDefault}
-                          name="default-provider"
-                          onChange={() => setDefaultProvider(provider.key)}
-                          type="radio"
-                        />
-                        <span>設為預設載入</span>
-                      </label>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
+            <div className="accounts-layout">
+              <section className="accounts-rail">
+                <div className="section-head">
+                  <strong>登入入口</strong>
+                  <span>不是假標記，是實際登入頁入口</span>
+                </div>
+                <div className="account-grid">
+                  {PROVIDERS.map((provider) => {
+                    const account = accounts.find((entry) => entry.provider === provider.key);
+                    const isDefault = defaultProvider === provider.key;
+                    return (
+                      <article className="account-card" key={provider.key}>
+                        <div className="account-card-top">
+                          <div>
+                            <strong>{provider.label}</strong>
+                            <p>{provider.description}</p>
+                          </div>
+                          <span className={account?.connected ? "account-state is-connected" : "account-state"}>
+                            {account?.connected ? "已確認登入" : "尚未確認"}
+                          </span>
+                        </div>
 
-            <div className="flow-note">
-              <strong>目前已選 {connectedAccounts.length} 個可用帳號。</strong>
-              <p>
-                這一階段先把 UI 骨架與記憶流程建立好。後續會把每家 AI 的實際登入狀態檢查、持久化與切換策略做完整。
-              </p>
+                        <div className="account-meta">
+                          <span>登入頁</span>
+                          <strong>{provider.loginUrl}</strong>
+                        </div>
+
+                        <div className="account-actions">
+                          <button
+                            className="primary-action"
+                            onClick={() => void handleAccountEntry(provider.key)}
+                            type="button"
+                          >
+                            開啟 {provider.label} 登入頁
+                          </button>
+                          <button
+                            className={account?.connected ? "secondary-action is-active" : "secondary-action"}
+                            onClick={() => confirmAccount(provider.key)}
+                            type="button"
+                          >
+                            我已完成登入
+                          </button>
+                        </div>
+
+                        <div className="account-footer">
+                          <label className="default-choice">
+                            <input
+                              checked={isDefault}
+                              name="default-provider"
+                              onChange={() => setDefaultProvider(provider.key)}
+                              type="radio"
+                            />
+                            <span>設為所有角色的預設 AI</span>
+                          </label>
+                          <span>
+                            {account?.lastOpenedAt
+                              ? `最近開啟：${formatClock(account.lastOpenedAt)}`
+                              : "尚未開啟登入頁"}
+                          </span>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <aside className="accounts-guide">
+                <div className="section-head">
+                  <strong>使用方式</strong>
+                  <span>避免登入完卻不知道怎麼接下去</span>
+                </div>
+                <ol className="step-list">
+                  <li>點擊任一張卡片的「開啟登入頁」。</li>
+                  <li>在開啟的真實站點完成登入。</li>
+                  <li>回到 CORTEX 點「我已完成登入」。</li>
+                  <li>至少完成一個帳號後，再進下一步。</li>
+                  <li>若有多個帳號，可選擇預設載入來源。</li>
+                </ol>
+
+                <div className="accounts-summary">
+                  <strong>目前已確認 {connectedAccounts.length} 個帳號。</strong>
+                  <p>工作區載入時，角色視窗會優先套用你選擇的預設 AI，之後也能逐格切換。</p>
+                </div>
+              </aside>
             </div>
           </div>
         </section>
@@ -1009,36 +1059,56 @@ export function App() {
 
     return (
       <section className="onboarding-screen">
-        <div className="flow-shell">
+        <div className="flow-shell project-shell">
           <div className="flow-header">
             <div>
               <span className="hero-kicker">第三步</span>
-              <h2>選擇新專案或載入既有專案，然後進入完整工作區。</h2>
+              <h2>選擇要載入的專案，然後進入完整工作區。</h2>
             </div>
             <button className="primary-action" onClick={enterWorkspace} type="button">
               進入工作區
             </button>
           </div>
 
-          <div className="project-grid">
-            <button className="project-card create-card" type="button">
-              <strong>建立新專案</strong>
-              <p>建立全新工作台、角色編組、常駐區與協作節奏。</p>
-              <span>UI 先完成，建立流程後續補上。</span>
-            </button>
-
-            {projects.map((project) => (
-              <button
-                className={project.id === selectedProjectId ? "project-card is-active" : "project-card"}
-                key={project.id}
-                onClick={() => setSelectedProjectId(project.id)}
-                type="button"
-              >
-                <strong>{project.name}</strong>
-                <p>{project.description || "尚未填寫專案說明。"}</p>
-                <span>{project.status}</span>
+          <div className="project-layout">
+            <section className="project-hero-card">
+              <div className="section-head">
+                <strong>專案入口</strong>
+                <span>先把版面收穩，不再讓畫面爆框</span>
+              </div>
+              <h3>建立新專案</h3>
+              <p>後續會在這裡放完整的新專案建立流程，目前先保留清楚入口，不讓畫面與卡片互相擠壓。</p>
+              <button className="ghost-action" type="button">
+                準備建立新專案
               </button>
-            ))}
+            </section>
+
+            <section className="project-selection-panel">
+              <div className="section-head">
+                <strong>載入既有專案</strong>
+                <span>{projects.length} 個可載入專案</span>
+              </div>
+              <div className="project-scroll-list">
+                {projects.map((project) => (
+                  <button
+                    className={project.id === selectedProjectId ? "project-list-card is-active" : "project-list-card"}
+                    key={project.id}
+                    onClick={() => setSelectedProjectId(project.id)}
+                    type="button"
+                  >
+                    <div className="project-list-top">
+                      <strong>{project.name}</strong>
+                      <span>{project.status}</span>
+                    </div>
+                    <p>{project.description || "尚未填寫專案說明。"}</p>
+                    <div className="project-list-meta">
+                      <span>建立日期</span>
+                      <strong>{formatLongDate(project.created_at)}</strong>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
           </div>
         </div>
       </section>
@@ -1052,7 +1122,7 @@ export function App() {
           <section className="sidebar-section">
             <div className="sidebar-heading-row">
               <strong>必要角色常駐區</strong>
-              <span>預設只保留 CoWork</span>
+              <span>預設至少包含 CoWork</span>
             </div>
             <div className="pinned-list">
               {pinnedRoleIds.map((roleId) => {
@@ -1060,29 +1130,25 @@ export function App() {
                   return (
                     <article className="pinned-card" key={roleId}>
                       <strong>CoWork</strong>
-                      <p>必要常駐協作區，所有參與角色都要在這裡同步與交接。</p>
+                      <p>所有角色的共同討論區、交接區與同步區。</p>
                     </article>
                   );
                 }
 
                 const role = roleLibrary.find((entry) => entry.id === roleId);
-                if (!role) {
-                  return null;
-                }
-
-                return (
+                return role ? (
                   <article className="pinned-card" key={role.id}>
                     <strong>{role.name}</strong>
                     <p>{role.summary}</p>
                   </article>
-                );
+                ) : null;
               })}
             </div>
           </section>
           <section className="sidebar-section">
             <div className="sidebar-heading-row">
               <strong>快速調整</strong>
-              <span>從角色庫選擇常駐</span>
+              <span>選擇哪些角色要常駐</span>
             </div>
             <div className="toggle-list">
               {roleLibrary.map((role) => (
@@ -1112,7 +1178,7 @@ export function App() {
             <div className="library-list">
               {SKILLS.map((skill) => (
                 <button
-                  className={selectedSkill?.id === skill.id ? "library-card is-active" : "library-card"}
+                  className={selectedSkill.id === skill.id ? "library-card is-active" : "library-card"}
                   key={skill.id}
                   onClick={() => setSelectedSkillId(skill.id)}
                   type="button"
@@ -1125,12 +1191,12 @@ export function App() {
           </section>
           <section className="sidebar-section detail-section">
             <div className="sidebar-heading-row">
-              <strong>{selectedSkill?.name}</strong>
+              <strong>{selectedSkill.name}</strong>
               <span>詳細說明</span>
             </div>
-            <p>{selectedSkill?.detail}</p>
+            <p>{selectedSkill.detail}</p>
             <div className="tag-row">
-              {selectedSkill?.tags.map((tag) => (
+              {selectedSkill.tags.map((tag) => (
                 <span className="tag-chip" key={tag}>
                   {tag}
                 </span>
@@ -1152,7 +1218,7 @@ export function App() {
             <div className="library-list">
               {roleLibrary.map((role) => (
                 <button
-                  className={selectedRoleLibrary?.id === role.id ? "library-card is-active" : "library-card"}
+                  className={selectedRoleLibrary.id === role.id ? "library-card is-active" : "library-card"}
                   key={role.id}
                   onClick={() => setSelectedRoleLibraryId(role.id)}
                   type="button"
@@ -1163,22 +1229,20 @@ export function App() {
               ))}
             </div>
           </section>
-          {selectedRoleLibrary ? (
-            <section className="sidebar-section detail-section">
-              <div className="sidebar-heading-row">
-                <strong>{selectedRoleLibrary.name}</strong>
-                <span>{providerConfig(selectedRoleLibrary.provider).label}</span>
-              </div>
-              <p>{selectedRoleLibrary.detail}</p>
-              <button
-                className={selectedRoleLibrary.pinned ? "secondary-action is-active" : "secondary-action"}
-                onClick={() => togglePinnedRole(selectedRoleLibrary.id)}
-                type="button"
-              >
-                {selectedRoleLibrary.pinned ? "已加入常駐區" : "加入常駐區"}
-              </button>
-            </section>
-          ) : null}
+          <section className="sidebar-section detail-section">
+            <div className="sidebar-heading-row">
+              <strong>{selectedRoleLibrary.name}</strong>
+              <span>{providerConfig(selectedRoleLibrary.provider).label}</span>
+            </div>
+            <p>{selectedRoleLibrary.detail}</p>
+            <button
+              className={selectedRoleLibrary.pinned ? "secondary-action is-active" : "secondary-action"}
+              onClick={() => togglePinnedRole(selectedRoleLibrary.id)}
+              type="button"
+            >
+              {selectedRoleLibrary.pinned ? "已加入常駐區" : "加入常駐區"}
+            </button>
+          </section>
         </>
       );
     }
@@ -1189,7 +1253,7 @@ export function App() {
           <section className="sidebar-section">
             <div className="sidebar-heading-row">
               <strong>主控台</strong>
-              <span>整合啟動與執行訊息</span>
+              <span>整合啟動與工作台提示</span>
             </div>
             <div className="console-panel">
               {consoleLines.map((line) => (
@@ -1201,12 +1265,10 @@ export function App() {
           </section>
           <section className="sidebar-section detail-section">
             <div className="sidebar-heading-row">
-              <strong>後續規劃</strong>
+              <strong>下一步</strong>
               <span>待實作</span>
             </div>
-            <p>
-              這裡之後會接入真正的桌面啟動紀錄、服務心跳、錯誤訊息與內建終端顯示，不再另外跳出黑色命令視窗。
-            </p>
+            <p>後續會把真正的終端輸出、服務狀態與錯誤訊息收進這個頁面，不再另外彈出黑窗。</p>
           </section>
         </>
       );
@@ -1218,7 +1280,6 @@ export function App() {
           <div className="sidebar-label">CORTEX WORKBENCH</div>
           <div className="project-title">{activeProject?.name ?? "CORTEX"}</div>
         </section>
-
         <section className="sidebar-section">
           <div className="sidebar-heading-row">
             <strong>已載入角色</strong>
@@ -1256,31 +1317,6 @@ export function App() {
             })}
           </div>
         </section>
-
-        <section className="sidebar-section">
-          <div className="sidebar-heading-row">
-            <strong>工作區狀態</strong>
-            <span>{isLoadingWorkspace ? "同步中" : "已連線"}</span>
-          </div>
-          <div className="status-grid">
-            <div className="status-row">
-              <span>專案</span>
-              <strong>{activeProject?.name ?? "尚未選擇"}</strong>
-            </div>
-            <div className="status-row">
-              <span>可用帳號</span>
-              <strong>{connectedAccounts.length} 個</strong>
-            </div>
-            <div className="status-row">
-              <span>預設 AI</span>
-              <strong>{providerConfig(defaultProvider).label}</strong>
-            </div>
-            <div className="status-row">
-              <span>CoWork</span>
-              <strong>常駐</strong>
-            </div>
-          </div>
-        </section>
       </>
     );
   }
@@ -1296,7 +1332,7 @@ export function App() {
           <div className="pane-toolbar">
             <div className="pane-toolbar-title">
               <strong>尚未選擇角色工作視窗</strong>
-              <span>請先從角色或分頁選擇要顯示的工作區。</span>
+              <span>請先從角色列表或分頁選擇要顯示的工作區。</span>
             </div>
           </div>
           <div className="pane-surface">
@@ -1310,7 +1346,6 @@ export function App() {
 
     const provider = providerConfig(resolvedProvider(session));
     const status = viewStatuses[session.id];
-
     return (
       <section className="workspace-pane">
         <div className="pane-toolbar">
@@ -1321,7 +1356,6 @@ export function App() {
                 {roleStatus(status)}
               </span>
               <span>{provider.label}</span>
-              <span>{resolvedWorkspaceUrl(session)}</span>
             </div>
           </div>
           <div className="pane-toolbar-actions">
@@ -1347,11 +1381,7 @@ export function App() {
                 </option>
               ))}
             </select>
-            <button
-              className="tiny-button"
-              onClick={() => desktopBridge?.refreshView(session.id)}
-              type="button"
-            >
+            <button className="tiny-button" onClick={() => desktopBridge?.refreshView(session.id)} type="button">
               重載
             </button>
           </div>
@@ -1404,14 +1434,6 @@ export function App() {
                 <span>{item.icon}</span>
               </button>
             ))}
-          </div>
-          <div className="activity-stack footer">
-            <button className="activity-button" type="button">
-              <span>我</span>
-            </button>
-            <button className="activity-button" type="button">
-              <span>設</span>
-            </button>
           </div>
         </aside>
 
@@ -1536,11 +1558,11 @@ export function App() {
               <div className="bottom-content simple-grid">
                 <article className="info-card">
                   <strong>下一步</strong>
-                  <p>把 CoWork、治理欄與角色視窗進一步接到真實資料流與交接流程。</p>
+                  <p>把 AI 帳號登入確認、預設載入策略與角色工作區真正串接起來。</p>
                 </article>
                 <article className="info-card">
                   <strong>目前風險</strong>
-                  <p>多 AI 實際登入狀態與多帳號切換仍是下一階段要完成的核心功能。</p>
+                  <p>這一段先把登入入口 UI 拉正，後續仍要補上真正的登入狀態檢查。</p>
                 </article>
                 <article className="info-card">
                   <strong>交接提醒</strong>
@@ -1553,31 +1575,22 @@ export function App() {
 
         <aside className="governance-column">
           <div className="governance-title">治理側欄</div>
-
           <section className="governance-block">
             <div className="governance-head">
               <strong>決策板</strong>
               <button type="button">查看全部</button>
             </div>
             <div className="governance-cards">
-              {decisions.slice(0, 3).map((decision) => (
+              {decisions.map((decision) => (
                 <article className="governance-card" key={decision.id}>
                   <div className="governance-card-top">
-                    <span className={`decision-badge ${decisionTone(decision.status)}`}>
-                      {decision.status}
-                    </span>
+                    <span className={`decision-badge ${decisionTone(decision.status)}`}>{decision.status}</span>
                     <span>{formatClock(decision.created_at)}</span>
                   </div>
                   <strong>{decision.title}</strong>
                   <p>{decision.summary}</p>
                 </article>
               ))}
-              {decisions.length === 0 ? (
-                <article className="governance-card">
-                  <strong>尚無決策資料</strong>
-                  <p>這裡會顯示 Architect、Engineer、Reviewer、PM 的關鍵決策與狀態。</p>
-                </article>
-              ) : null}
             </div>
           </section>
 
@@ -1587,7 +1600,7 @@ export function App() {
               <button type="button">查看全部</button>
             </div>
             <div className="governance-cards">
-              {memories.slice(0, 3).map((memory) => (
+              {memories.map((memory) => (
                 <article className="governance-card compact" key={memory.id}>
                   <div className="governance-card-top">
                     <span>{memory.memory_type}</span>
@@ -1596,12 +1609,6 @@ export function App() {
                   <p>{memory.content}</p>
                 </article>
               ))}
-              {memories.length === 0 ? (
-                <article className="governance-card compact">
-                  <strong>尚無記憶資料</strong>
-                  <p>後續會顯示專案目標、技術選型、里程碑與鎖定背景。</p>
-                </article>
-              ) : null}
             </div>
           </section>
 
@@ -1611,7 +1618,7 @@ export function App() {
               <button type="button">查看全部</button>
             </div>
             <div className="governance-cards">
-              {rules.slice(0, 5).map((rule) => (
+              {rules.map((rule) => (
                 <article className="governance-card compact" key={rule.id}>
                   <div className="constitution-row">
                     <span className="constitution-check">✓</span>
@@ -1622,17 +1629,6 @@ export function App() {
                   </div>
                 </article>
               ))}
-              {rules.length === 0 ? (
-                <article className="governance-card compact">
-                  <div className="constitution-row">
-                    <span className="constitution-check">✓</span>
-                    <div>
-                      <strong>治理區待接資料</strong>
-                      <p>後續會串接正式 constitution、decision、memory 資料來源。</p>
-                    </div>
-                  </div>
-                </article>
-              ) : null}
             </div>
           </section>
         </aside>

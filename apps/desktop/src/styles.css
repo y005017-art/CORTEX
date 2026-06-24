@@ -273,10 +273,12 @@ select {
 
 .flow-shell {
   min-height: 760px;
+  max-height: calc(100vh - 48px);
   display: grid;
   align-content: start;
   gap: 22px;
   padding: 28px;
+  overflow: auto;
 }
 
 .flow-header {
@@ -298,6 +300,176 @@ select {
 
 .project-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.accounts-shell,
+.project-shell {
+  align-content: start;
+}
+
+.accounts-layout,
+.project-layout {
+  min-height: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.accounts-layout {
+  grid-template-columns: minmax(0, 1.55fr) 360px;
+}
+
+.accounts-rail,
+.accounts-guide,
+.project-hero-card,
+.project-selection-panel {
+  min-height: 0;
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+  background: rgba(21, 28, 39, 0.96);
+}
+
+.section-head {
+  display: grid;
+  gap: 4px;
+}
+
+.section-head strong {
+  font-size: 18px;
+}
+
+.section-head span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.account-card-top,
+.account-meta,
+.account-footer,
+.project-list-top,
+.project-list-meta {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-state {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #b9c5d7;
+  font-size: 12px;
+}
+
+.account-state.is-connected {
+  color: #7de8a3;
+  background: rgba(54, 198, 111, 0.12);
+}
+
+.account-meta {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.account-meta span,
+.account-footer span,
+.project-list-meta span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.account-meta strong,
+.project-list-meta strong {
+  font-size: 13px;
+  word-break: break-all;
+}
+
+.account-footer {
+  align-items: center;
+}
+
+.accounts-guide {
+  align-content: start;
+}
+
+.step-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 12px;
+  color: #d8e1ee;
+  line-height: 1.6;
+}
+
+.accounts-summary {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.accounts-summary strong,
+.project-hero-card h3 {
+  font-size: 20px;
+}
+
+.project-layout {
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.project-hero-card {
+  align-content: start;
+}
+
+.project-selection-panel {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.project-scroll-list {
+  min-height: 0;
+  display: grid;
+  gap: 14px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.project-list-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  text-align: left;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  background: #182230;
+  color: var(--text);
+}
+
+.project-list-card.is-active {
+  border-color: rgba(63, 141, 246, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(63, 141, 246, 0.24);
+}
+
+.project-list-top strong {
+  font-size: 18px;
+}
+
+.project-list-top span {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #8fb6f6;
+  background: rgba(63, 141, 246, 0.12);
+  font-size: 12px;
 }
 
 .account-card,
@@ -1014,6 +1186,8 @@ select {
   .hero-panel,
   .account-grid,
   .project-grid,
+  .accounts-layout,
+  .project-layout,
   .pane-split,
   .simple-grid,
   .cowork-layout {
