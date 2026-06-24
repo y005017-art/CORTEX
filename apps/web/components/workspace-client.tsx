@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   approveDecision,
@@ -44,6 +44,8 @@ type ProviderTemplate = {
   guidance: string;
 };
 
+type ActivityView = "roles" | "files" | "search" | "graph" | "launch" | "shield";
+type BottomView = "cowork" | "logs" | "handover";
 type MessageMap = Record<string, Message[]>;
 type DraftMap = Record<string, string>;
 type BusyMap = Record<string, boolean>;
@@ -52,67 +54,35 @@ type ProviderSelectionMap = Record<string, string>;
 
 const DEFAULT_ROLE_BLUEPRINTS: RoleWindowDefinition[] = [
   {
-    id: "preset-lead",
-    name: "LEAD",
-    role_type: "lead",
+    id: "preset-architect",
+    name: "Architect",
+    role_type: "architecture",
     status: "standby",
-    description: "負責拆解任務、整合進度、推進跨角色協作。",
+    description: "Owns system framing, decomposition, and cross-role direction.",
     roleId: null,
   },
   {
-    id: "preset-dba",
-    name: "DBA",
-    role_type: "database",
+    id: "preset-engineer",
+    name: "Engineer",
+    role_type: "implementation",
     status: "standby",
-    description: "負責資料結構、查詢、遷移與資料治理風險。",
+    description: "Builds product slices, integrations, and delivery details.",
     roleId: null,
   },
   {
-    id: "preset-mcp",
-    name: "MCP",
-    role_type: "tools",
+    id: "preset-reviewer",
+    name: "Reviewer",
+    role_type: "quality",
     status: "standby",
-    description: "負責工具能力、連接器與外部工作面接軌。",
+    description: "Checks risk, regressions, and missing validation paths.",
     roleId: null,
   },
   {
-    id: "preset-skill",
-    name: "SKILL",
-    role_type: "prompting",
+    id: "preset-pm",
+    name: "PM",
+    role_type: "planning",
     status: "standby",
-    description: "負責技能、工作方法、提示結構與操作準則。",
-    roleId: null,
-  },
-  {
-    id: "preset-front",
-    name: "FRONT",
-    role_type: "frontend",
-    status: "standby",
-    description: "負責介面、互動流程、視窗體驗與可用性。",
-    roleId: null,
-  },
-  {
-    id: "preset-security",
-    name: "SECURITY",
-    role_type: "security",
-    status: "standby",
-    description: "負責權限、風險邊界、訊息與記憶污染防護。",
-    roleId: null,
-  },
-  {
-    id: "preset-aibe",
-    name: "AIBE",
-    role_type: "governance",
-    status: "standby",
-    description: "負責治理規格、決策路由、合規與階段門檻。",
-    roleId: null,
-  },
-  {
-    id: "preset-cmo",
-    name: "CMO",
-    role_type: "strategy",
-    status: "standby",
-    description: "負責對外敘事、商業視角與交付包裝。",
+    description: "Tracks goal clarity, sequencing, and decision readiness.",
     roleId: null,
   },
 ];
@@ -122,26 +92,35 @@ const PROVIDER_TEMPLATES: ProviderTemplate[] = [
     key: "chatgpt",
     label: "ChatGPT",
     workspaceUrl: "https://chatgpt.com",
-    guidance: "適合統整任務、快速拆解與多步協作指令。",
+    guidance: "Open the external chat, paste the startup prompt, and treat it as the role workspace.",
   },
   {
     key: "claude",
     label: "Claude",
     workspaceUrl: "https://claude.ai",
-    guidance: "適合長文分析、規格檢查與高密度推理工作。",
+    guidance: "Use Claude as a dedicated role window for analysis or implementation work.",
   },
   {
     key: "gemini",
     label: "Gemini",
     workspaceUrl: "https://gemini.google.com",
-    guidance: "適合研究、整理資料與 Google 生態協作。",
+    guidance: "Use Gemini when the role needs a separate browser-based workspace.",
   },
   {
     key: "deepseek",
     label: "DeepSeek",
     workspaceUrl: "https://chat.deepseek.com",
-    guidance: "適合工程討論、程式推理與成本敏感場景。",
+    guidance: "Use DeepSeek as an alternate role workspace for focused technical tasks.",
   },
+];
+
+const ACTIVITY_ITEMS: Array<{ id: ActivityView; label: string; icon: string }> = [
+  { id: "roles", label: "Roles", icon: "AI" },
+  { id: "files", label: "Workspace", icon: "WS" },
+  { id: "search", label: "Search", icon: "S" },
+  { id: "graph", label: "Flow", icon: "F" },
+  { id: "launch", label: "Launch", icon: "L" },
+  { id: "shield", label: "Govern", icon: "G" },
 ];
 
 function formatTime(value: string): string {
@@ -155,31 +134,58 @@ function formatTime(value: string): string {
 }
 
 function buildStartupPrompt(project: Project, role: RoleWindowDefinition): string {
-  const projectSummary = project.description?.trim() || "尚未補充專案描述。";
+  const summary = project.description?.trim() || "No project summary yet.";
 
   return [
-    `你現在是 CORTEX 專案「${project.name}」中的角色工作視窗。`,
-    `角色名稱：${role.name}`,
-    `角色職責：${role.description}`,
-    `專案說明：${projectSummary}`,
+    `You are the ${role.name} role inside the CORTEX workspace for project "${project.name}".`,
+    `Role focus: ${role.description}`,
+    `Project summary: ${summary}`,
     "",
-    "請遵守以下工作方式：",
-    "1. 只從這個角色的責任範圍回應。",
-    "2. 先整理需求，再提出可執行工作項目。",
-    "3. 回覆時標示：收件、分析、下一步、風險。",
-    "4. 不直接跳過治理與決策流程。",
-    "5. 若資訊不足，先提出你需要的補充上下文。",
+    "Working rules:",
+    "1. Stay within your assigned role perspective.",
+    "2. Produce outputs that can be handed back into the CORTEX workspace.",
+    "3. Make decisions explicit, concise, and implementation-oriented.",
+    "4. Flag uncertainty, blockers, and follow-up actions clearly.",
+    "5. Keep context aligned with shared project governance.",
   ].join("\n");
 }
 
 function summarizeRole(role: Role): string {
-  return role.description || "此角色尚未補充工作說明。";
+  return role.description?.trim() || "Dedicated role workspace inside CORTEX.";
 }
 
 function getProviderTemplate(providerKey?: string | null): ProviderTemplate {
   return (
     PROVIDER_TEMPLATES.find((entry) => entry.key === providerKey) ?? PROVIDER_TEMPLATES[0]
   );
+}
+
+function getStatusTone(status: string): "working" | "idle" | "standby" {
+  const normalized = status.toLowerCase();
+  if (normalized.includes("work") || normalized.includes("active") || normalized.includes("online")) {
+    return "working";
+  }
+  if (normalized.includes("idle")) {
+    return "idle";
+  }
+  return "standby";
+}
+
+function getDecisionTone(status: string): "approved" | "pending" {
+  return status.toLowerCase() === "approved" ? "approved" : "pending";
+}
+
+function getMemoryNextAction(status: string): { label: string; value: string } | null {
+  if (status === "draft") {
+    return { label: "Verify", value: "verified" };
+  }
+  if (status === "verified") {
+    return { label: "Lock", value: "locked" };
+  }
+  if (status !== "archived") {
+    return { label: "Archive", value: "archived" };
+  }
+  return null;
 }
 
 export function WorkspaceClient({ project }: WorkspaceClientProps) {
@@ -204,6 +210,11 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activityView, setActivityView] = useState<ActivityView>("roles");
+  const [bottomView, setBottomView] = useState<BottomView>("cowork");
+  const [primaryTabId, setPrimaryTabId] = useState<string | null>(null);
+  const [secondaryTabId, setSecondaryTabId] = useState<string | null>(null);
+  const workspaceRequestId = useRef(0);
 
   const roleDefinitions = useMemo<RoleWindowDefinition[]>(() => {
     if (roles.length === 0) {
@@ -215,7 +226,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         if (left.is_permanent !== right.is_permanent) {
           return left.is_permanent ? -1 : 1;
         }
-        return left.name.localeCompare(right.name, "zh-Hant");
+        return left.name.localeCompare(right.name, "en");
       })
       .map((role) => ({
         id: role.id,
@@ -243,31 +254,69 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
     [chatSessions, roleDefinitions]
   );
 
-  const externalChatSessions = useMemo(
-    () => roleWindows.filter((entry) => Boolean(entry.session)).length,
+  const roleWindowMap = useMemo(
+    () => Object.fromEntries(roleWindows.map((entry) => [entry.role.id, entry])),
     [roleWindows]
   );
 
-  async function refreshMessages(sessions: ChatSession[]) {
-    if (sessions.length === 0) {
-      setMessagesByThread({});
+  const activeRoleWindows = useMemo(
+    () => roleWindows.filter((entry) => Boolean(entry.session)),
+    [roleWindows]
+  );
+
+  const externalChatSessions = activeRoleWindows.length;
+
+  useEffect(() => {
+    if (roleWindows.length === 0) {
+      setPrimaryTabId(null);
+      setSecondaryTabId(null);
       return;
     }
 
-    setLoadingMessages(true);
+    setPrimaryTabId((current) =>
+      current && roleWindowMap[current] ? current : roleWindows[0]?.role.id ?? null
+    );
+    setSecondaryTabId((current) => {
+      if (current && roleWindowMap[current]) {
+        return current;
+      }
+      const fallback = roleWindows.find((entry) => entry.role.id !== primaryTabId);
+      return fallback?.role.id ?? roleWindows[0]?.role.id ?? null;
+    });
+  }, [primaryTabId, roleWindowMap, roleWindows]);
+
+  async function refreshMessages(sessions: ChatSession[], requestId: number) {
+    if (sessions.length === 0) {
+      if (workspaceRequestId.current === requestId) {
+        setMessagesByThread({});
+      }
+      return;
+    }
+
+    if (workspaceRequestId.current === requestId) {
+      setLoadingMessages(true);
+    }
     try {
-      const entries = await Promise.all(
+      const settled = await Promise.allSettled(
         sessions.map(async (session) => [session.thread_id, await listMessages(session.thread_id)] as const)
       );
+      if (workspaceRequestId.current !== requestId) {
+        return;
+      }
+      const entries = settled
+        .filter((result): result is PromiseFulfilledResult<readonly [string, Message[]]> => result.status === "fulfilled")
+        .map((result) => result.value);
       setMessagesByThread(Object.fromEntries(entries));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "讀取聊天紀錄時發生問題。");
     } finally {
-      setLoadingMessages(false);
+      if (workspaceRequestId.current === requestId) {
+        setLoadingMessages(false);
+      }
     }
   }
 
   async function refreshWorkspace() {
+    const requestId = workspaceRequestId.current + 1;
+    workspaceRequestId.current = requestId;
     setLoadingWorkspace(true);
     try {
       setError(null);
@@ -279,16 +328,23 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         listRoles(),
         listRules(),
       ]);
+      if (workspaceRequestId.current !== requestId) {
+        return;
+      }
       setChatSessions(sessionData);
       setDecisions(decisionData);
       setMemories(memoryData);
       setRoles(roleData);
       setRules(ruleData);
-      await refreshMessages(sessionData);
+      await refreshMessages(sessionData, requestId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "載入工作台時發生問題。");
+      if (workspaceRequestId.current === requestId) {
+        setError(err instanceof Error ? err.message : "Failed to load the CORTEX workspace.");
+      }
     } finally {
-      setLoadingWorkspace(false);
+      if (workspaceRequestId.current === requestId) {
+        setLoadingWorkspace(false);
+      }
     }
   }
 
@@ -327,7 +383,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       await navigator.clipboard.writeText(prompt);
       setNotice(successText);
     } catch {
-      setError("已產生啟動提示，但這次無法自動複製到剪貼簿。");
+      setError("Unable to copy the startup prompt automatically.");
     }
   }
 
@@ -340,7 +396,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setCreatingRoleSessionId(role.id);
       setError(null);
       setNotice(null);
-      const session = await createChatSession(project.id, {
+      await createChatSession(project.id, {
         title: role.name,
         session_type: "role_chat",
         role_id: role.roleId ?? undefined,
@@ -350,15 +406,15 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         startup_prompt: startupPrompt,
       });
 
-      if (popup && session.workspace_url) {
-        popup.location.href = session.workspace_url;
+      if (popup) {
+        popup.location.href = provider.workspaceUrl;
       }
 
-      await copyPrompt(startupPrompt, `已為 ${role.name} 建立 ${provider.label} 工作視窗，啟動提示也已複製。`);
+      await copyPrompt(startupPrompt, `${role.name} prompt copied. Paste it into ${provider.label}.`);
       await refreshWorkspace();
     } catch (err) {
       popup?.close();
-      setError(err instanceof Error ? err.message : "建立角色工作視窗時發生問題。");
+      setError(err instanceof Error ? err.message : "Failed to create role workspace.");
     } finally {
       setCreatingRoleSessionId(null);
     }
@@ -367,7 +423,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   async function handleCreateQuickSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!quickSessionTitle.trim()) {
-      setError("請先輸入協調視窗名稱。");
+      setError("Enter a tab name before creating a session.");
       return;
     }
 
@@ -382,7 +438,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setQuickSessionTitle("");
       await refreshWorkspace();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "建立協調視窗時發生問題。");
+      setError(err instanceof Error ? err.message : "Failed to create session tab.");
     } finally {
       setCreatingQuickSession(false);
     }
@@ -391,7 +447,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   async function handleSendMessage(session: ChatSession) {
     const draft = messageDrafts[session.thread_id]?.trim() ?? "";
     if (!draft) {
-      setError(`請先輸入要記錄到 ${session.title} 的工作摘記。`);
+      setError(`Enter a message before sending it to ${session.title}.`);
       return;
     }
 
@@ -406,9 +462,9 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
         content_text: draft,
       });
       setMessageDrafts((current) => ({ ...current, [session.thread_id]: "" }));
-      await refreshMessages(chatSessions);
+      await refreshMessages(chatSessions, workspaceRequestId.current);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "寫入工作摘記時發生問題。");
+      setError(err instanceof Error ? err.message : "Failed to send workspace message.");
     } finally {
       setSubmittingMessages((current) => ({ ...current, [session.thread_id]: false }));
     }
@@ -420,16 +476,16 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setError(null);
       setNotice(null);
       const result = await runCoWork(session.thread_id);
-      const providerText = result.provider_key ? ` / 來源 ${result.provider_key}` : "";
+      const providerText = result.provider_key ? ` via ${result.provider_key}` : "";
       setCoworkStatus((current) => ({
         ...current,
         [session.thread_id]: result.deduplicated
-          ? `CoWork 已完成，結果已與既有決策整合${providerText}`
-          : `CoWork 已完成，已新增分析結果${providerText}`,
+          ? `CoWork generated a deduplicated update${providerText}.`
+          : `CoWork generated a new update${providerText}.`,
       }));
-      await Promise.all([refreshMessages(chatSessions), refreshWorkspace()]);
+      await Promise.all([refreshMessages(chatSessions, workspaceRequestId.current), refreshWorkspace()]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "執行 CoWork 時發生問題。");
+      setError(err instanceof Error ? err.message : "Failed to run CoWork.");
     } finally {
       setRunningCoWork((current) => ({ ...current, [session.thread_id]: false }));
     }
@@ -438,7 +494,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   async function handleCreateDecision(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!decisionTitle.trim() || !decisionSummary.trim()) {
-      setError("請完整輸入決策標題與摘要。");
+      setError("Decision title and summary are both required.");
       return;
     }
 
@@ -454,7 +510,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setDecisionSummary("");
       await refreshWorkspace();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "建立決策時發生問題。");
+      setError(err instanceof Error ? err.message : "Failed to create decision.");
     } finally {
       setCreatingDecision(false);
     }
@@ -467,7 +523,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       await approveDecision(decisionId);
       await refreshWorkspace();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "核准決策時發生問題。");
+      setError(err instanceof Error ? err.message : "Failed to approve decision.");
     }
   }
 
@@ -478,387 +534,703 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       await transitionMemory(memoryId, status);
       await refreshWorkspace();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "更新記憶狀態時發生問題。");
+      setError(err instanceof Error ? err.message : "Failed to update memory status.");
     }
   }
 
-  return (
-    <main className="workspace-shell">
-      <section className="workspace-hero">
-        <div className="workspace-hero-copy">
-          <p className="eyebrow">CORTEX</p>
-          <h1>{project.name}</h1>
-          <p className="summary">
-            {project.description || "這個專案會以多角色 chat workspace 的方式同步推進。"}
-          </p>
+  const primaryPane = primaryTabId ? roleWindowMap[primaryTabId] ?? roleWindows[0] : roleWindows[0];
+  const secondaryPane = secondaryTabId
+    ? roleWindowMap[secondaryTabId] ?? roleWindows[1] ?? roleWindows[0]
+    : roleWindows[1] ?? roleWindows[0];
+
+  function renderSidebarContent() {
+    if (activityView === "roles") {
+      return (
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span>Loaded Roles</span>
+            <span>{roleWindows.length}</span>
+          </div>
+          <div className="role-list">
+            {roleWindows.map(({ role, session }) => {
+              const tone = getStatusTone(session?.status ?? role.status);
+              return (
+                <button
+                  className={`role-list-item tone-${tone}`}
+                  key={role.id}
+                  onClick={() => {
+                    setPrimaryTabId(role.id);
+                    if (secondaryTabId === role.id) {
+                      const fallback = roleWindows.find((entry) => entry.role.id !== role.id);
+                      setSecondaryTabId(fallback?.role.id ?? role.id);
+                    }
+                  }}
+                  type="button"
+                >
+                  <div>
+                    <strong>{role.name}</strong>
+                    <span>{session?.provider_site ?? role.role_type}</span>
+                  </div>
+                  <span className="state-pill">{session ? session.status : "unbound"}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <div className="workspace-hero-stats">
-          <div className="hero-stat">
-            <strong>{roleWindows.length}</strong>
-            <span>角色工作位</span>
+      );
+    }
+
+    if (activityView === "files") {
+      return (
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span>Workspace</span>
+            <span>CORTEX</span>
           </div>
-          <div className="hero-stat">
-            <strong>{externalChatSessions}</strong>
-            <span>已綁定外部 Chat</span>
+          <div className="tree-list">
+            <div className="tree-group">
+              <strong>chat_sessions</strong>
+              {roleWindows.map(({ role }) => (
+                <span key={role.id}>{role.name}.session</span>
+              ))}
+            </div>
+            <div className="tree-group">
+              <strong>memory</strong>
+              <span>snapshot.index</span>
+              <span>locked.memories</span>
+            </div>
+            <div className="tree-group">
+              <strong>constitution</strong>
+              <span>ruleset.yaml</span>
+            </div>
+            <div className="tree-group">
+              <strong>handover</strong>
+              <span>next-step.md</span>
+            </div>
           </div>
-          <div className="hero-stat">
-            <strong>{decisions.length}</strong>
-            <span>決策</span>
+        </div>
+      );
+    }
+
+    if (activityView === "search") {
+      return (
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span>Search</span>
+            <span>Context</span>
           </div>
-          <div className="hero-stat">
-            <strong>{memories.length}</strong>
-            <span>記憶</span>
+          <div className="search-card">
+            <strong>Fast workspace signals</strong>
+            <span>{externalChatSessions} external role workspaces connected</span>
+            <span>{decisions.length} decisions in governance</span>
+            <span>{memories.length} memories tracked</span>
           </div>
+        </div>
+      );
+    }
+
+    if (activityView === "graph") {
+      return (
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span>Flow</span>
+            <span>Live</span>
+          </div>
+          <div className="tree-list">
+            <div className="tree-group">
+              <strong>Architect</strong>
+              <span>Decision framing</span>
+              <span>Role routing</span>
+            </div>
+            <div className="tree-group">
+              <strong>Engineer</strong>
+              <span>Implementation stream</span>
+              <span>CoWork execution</span>
+            </div>
+            <div className="tree-group">
+              <strong>Reviewer</strong>
+              <span>Risk review</span>
+              <span>Governance feedback</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (activityView === "launch") {
+      return (
+        <div className="sidebar-section">
+          <div className="sidebar-section-header">
+            <span>Launch</span>
+            <span>New Tab</span>
+          </div>
+          <form className="compact-form" onSubmit={handleCreateQuickSession}>
+            <label className="field">
+              <span>Session title</span>
+              <input
+                value={quickSessionTitle}
+                onChange={(event) => setQuickSessionTitle(event.target.value)}
+                placeholder="Planning room, sync tab, research desk..."
+              />
+            </label>
+            <button className="secondary-button" disabled={creatingQuickSession} type="submit">
+              {creatingQuickSession ? "Creating..." : "Create Session"}
+            </button>
+          </form>
+        </div>
+      );
+    }
+
+    return (
+      <div className="sidebar-section">
+        <div className="sidebar-section-header">
+          <span>Status</span>
+          <span>Governance</span>
+        </div>
+        <div className="status-grid">
+          <div className="status-row">
+            <span>Active Roles</span>
+            <strong>
+              {activeRoleWindows.length}/{roleWindows.length}
+            </strong>
+          </div>
+          <div className="status-row">
+            <span>Memory Sync</span>
+            <strong>{memories.filter((entry) => entry.status !== "archived").length}</strong>
+          </div>
+          <div className="status-row">
+            <span>Rules Online</span>
+            <strong>{rules.length}</strong>
+          </div>
+          <div className="status-row">
+            <span>Last Refresh</span>
+            <strong>{loadingWorkspace ? "Loading" : "Ready"}</strong>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderPane(entry: { role: RoleWindowDefinition; session: ChatSession | null } | undefined, slot: string) {
+    if (!entry) {
+      return (
+        <section className="workspace-pane empty-pane">
+          <div className="pane-toolbar">
+            <strong>{slot}</strong>
+          </div>
+          <div className="empty-pane-copy">No workspace is assigned to this pane yet.</div>
+        </section>
+      );
+    }
+
+    const { role, session } = entry;
+    const provider = getProviderTemplate(session?.provider_site ?? providerSelections[role.id]);
+    const startupPrompt = session?.startup_prompt ?? buildStartupPrompt(project, role);
+    const messages = session ? messagesByThread[session.thread_id] ?? [] : [];
+    const latestMessage = messages[messages.length - 1] ?? null;
+    const draft = session ? messageDrafts[session.thread_id] ?? "" : "";
+    const isSending = session ? submittingMessages[session.thread_id] ?? false : false;
+    const isRunning = session ? runningCoWork[session.thread_id] ?? false : false;
+    const statusText = session ? coworkStatus[session.thread_id] : null;
+    const tone = getStatusTone(session?.status ?? role.status);
+
+    return (
+      <section className={`workspace-pane tone-${tone}`}>
+        <div className="pane-toolbar">
+          <div className="pane-title-group">
+            <strong>{role.name}</strong>
+            <span>{session ? `${provider.label} workspace` : "Role shell not bound yet"}</span>
+          </div>
+          <div className="pane-toolbar-actions">
+            <span className={`state-pill tone-${tone}`}>{session ? session.status : role.status}</span>
+            {session ? (
+              <button
+                className="ghost-button"
+                onClick={() => {
+                  const target = session.workspace_url || provider.workspaceUrl;
+                  window.open(target, "_blank", "noopener,noreferrer");
+                }}
+                type="button"
+              >
+                Open in Browser
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {session ? (
+          <>
+            <div className="embedded-stage">
+              <div className="embedded-stage-head">
+                <span>{provider.label}</span>
+                <span>{session.launch_mode}</span>
+              </div>
+              <div className="embedded-stage-body">
+                <div className="embedded-placeholder-orb">{role.name.slice(0, 1)}</div>
+                <h3>{role.name} / Chat Workspace</h3>
+                <p>{provider.guidance}</p>
+              </div>
+            </div>
+
+            <div className="pane-summary-strip">
+              <div>
+                <span>Messages</span>
+                <strong>{messages.length}</strong>
+              </div>
+              <div>
+                <span>Thread</span>
+                <strong>{session.session_type}</strong>
+              </div>
+              <div>
+                <span>Updated</span>
+                <strong>{latestMessage ? formatTime(latestMessage.created_at) : "--"}</strong>
+              </div>
+            </div>
+
+            {statusText ? <p className="status-banner compact">{statusText}</p> : null}
+
+            <div className="pane-feed">
+              {loadingMessages && messages.length === 0 ? (
+                <p className="empty-state">Loading role messages...</p>
+              ) : null}
+              {messages.length === 0 ? (
+                <p className="empty-state">No messages in CORTEX yet. Start from the external role chat.</p>
+              ) : null}
+              {messages.slice(-4).map((message) => (
+                <article className="feed-line" key={message.id}>
+                  <div className="feed-line-head">
+                    <span className="message-chip">{message.sender_type}</span>
+                    <span className="mini-meta">{formatTime(message.created_at)}</span>
+                  </div>
+                  <p>{message.content_text}</p>
+                </article>
+              ))}
+            </div>
+
+            <div className="pane-inspector">
+              <strong>Latest Context</strong>
+              <p>{latestMessage ? latestMessage.content_text : "Waiting for the first synced update."}</p>
+            </div>
+
+            <label className="field">
+              <span>Send a workspace instruction back into CORTEX</span>
+              <textarea
+                rows={4}
+                value={draft}
+                onChange={(event) => updateDraft(session.thread_id, event.target.value)}
+                placeholder={`Send the next instruction to ${role.name}...`}
+              />
+            </label>
+
+            <div className="pane-actions">
+              <button
+                className="primary-button"
+                disabled={isSending}
+                onClick={() => void handleSendMessage(session)}
+                type="button"
+              >
+                {isSending ? "Sending..." : "Send to Thread"}
+              </button>
+              <button
+                className="secondary-button"
+                disabled={isRunning}
+                onClick={() => void handleRunCoWork(session)}
+                type="button"
+              >
+                {isRunning ? "Running..." : "Run CoWork"}
+              </button>
+              <button
+                className="ghost-button"
+                onClick={() => void copyPrompt(startupPrompt, `${role.name} prompt copied.`)}
+                type="button"
+              >
+                Copy Prompt
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="pane-unbound">
+            <div className="embedded-stage compact">
+              <div className="embedded-stage-head">
+                <span>Unbound Role Workspace</span>
+                <span>{role.role_type}</span>
+              </div>
+              <div className="embedded-stage-body">
+                <div className="embedded-placeholder-orb">{role.name.slice(0, 1)}</div>
+                <h3>{role.name} / Ready to Launch</h3>
+                <p>{role.description}</p>
+              </div>
+            </div>
+
+            <label className="field">
+              <span>Provider</span>
+              <select
+                className="provider-select"
+                value={providerSelections[role.id] ?? PROVIDER_TEMPLATES[0].key}
+                onChange={(event) => updateProviderSelection(role.id, event.target.value)}
+              >
+                {PROVIDER_TEMPLATES.map((entryOption) => (
+                  <option key={entryOption.key} value={entryOption.key}>
+                    {entryOption.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <p className="pane-help">{provider.guidance}</p>
+
+            <pre className="prompt-preview">{startupPrompt}</pre>
+
+            <div className="pane-actions">
+              <button
+                className="primary-button"
+                disabled={creatingRoleSessionId === role.id}
+                onClick={() => void handleCreateRoleSession(role)}
+                type="button"
+              >
+                {creatingRoleSessionId === role.id ? "Creating..." : `Launch ${provider.label}`}
+              </button>
+              <button
+                className="ghost-button"
+                onClick={() => void copyPrompt(startupPrompt, `${role.name} prompt copied.`)}
+                type="button"
+              >
+                Copy Prompt
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
+
+  const coworkMessages = Object.values(messagesByThread)
+    .flat()
+    .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
+    .slice(-8);
+
+  return (
+    <main className="workspace-shell ide-shell">
+      <section className="ide-topbar">
+        <div className="ide-brand">
+          <div className="ide-brand-badge">C</div>
+          <div>
+            <strong>CORTEX Workspace</strong>
+            <span>{project.name}</span>
+          </div>
+        </div>
+        <div className="ide-topbar-meta">
+          <span>{loadingWorkspace ? "Syncing workspace..." : "Workspace ready"}</span>
+          <span>{externalChatSessions} role chats linked</span>
         </div>
       </section>
 
       {notice ? <p className="status-banner workspace-banner">{notice}</p> : null}
       {error ? <p className="error-text workspace-banner">{error}</p> : null}
 
-      <section className="workspace-layout-v2">
-        <section className="surface command-surface">
-          <div className="surface-header">
-            <div>
-              <p className="section-kicker">總覽</p>
-              <h2>角色工作台控制面</h2>
-            </div>
-            <span className="section-meta">{loadingWorkspace ? "載入中" : "已同步"}</span>
+      <section className="ide-frame">
+        <aside className="activity-bar">
+          <div className="activity-brand">CX</div>
+          <div className="activity-items">
+            {ACTIVITY_ITEMS.map((item) => (
+              <button
+                aria-label={item.label}
+                className={item.id === activityView ? "activity-button is-active" : "activity-button"}
+                key={item.id}
+                onClick={() => setActivityView(item.id)}
+                type="button"
+              >
+                <span>{item.icon}</span>
+              </button>
+            ))}
           </div>
-
-          <div className="command-grid">
-            <div className="command-card">
-              <strong>已啟用角色</strong>
-              <span>
-                {roleWindows.filter((entry) => entry.session).length} / {roleWindows.length}
-              </span>
-            </div>
-            <div className="command-card">
-              <strong>外部 Chat</strong>
-              <span>{externalChatSessions}</span>
-            </div>
-            <div className="command-card">
-              <strong>規則條目</strong>
-              <span>{rules.length}</span>
-            </div>
-            <div className="command-card">
-              <strong>有效記憶</strong>
-              <span>{memories.filter((entry) => entry.status !== "archived").length}</span>
-            </div>
-          </div>
-
-          <div className="surface-note">
-            主流 chat web 多半禁止直接嵌入頁面，所以 CORTEX 這一層改成管理每個角色的真實 chat 工作視窗。
-          </div>
-
-          <form className="compact-form command-form" onSubmit={handleCreateQuickSession}>
-            <label className="field">
-              <span>新增協調視窗</span>
-              <input
-                value={quickSessionTitle}
-                onChange={(event) => setQuickSessionTitle(event.target.value)}
-                placeholder="例如：整體協調、交付審查、風險彙整"
-              />
-            </label>
-            <button className="secondary-button" disabled={creatingQuickSession} type="submit">
-              {creatingQuickSession ? "建立中..." : "建立協調視窗"}
+          <div className="activity-footer">
+            <button className="activity-button" type="button">
+              <span>U</span>
             </button>
-          </form>
-        </section>
+            <button className="activity-button" type="button">
+              <span>S</span>
+            </button>
+          </div>
+        </aside>
 
-        <section className="role-chat-wall">
-          <div className="surface-header role-wall-header">
-            <div>
-              <p className="section-kicker">主工作區</p>
-              <h2>角色 Chat Workspace 牆</h2>
-            </div>
-            <span className="section-meta">每個角色綁定自己的真實 chat 工作頁</span>
+        <aside className="ide-sidebar">
+          <div className="ide-sidebar-head">
+            <strong>{ACTIVITY_ITEMS.find((item) => item.id === activityView)?.label}</strong>
+            <span>{project.status}</span>
+          </div>
+          {renderSidebarContent()}
+        </aside>
+
+        <section className="workbench-area">
+          <div className="editor-tabs">
+            {roleWindows.map(({ role, session }) => (
+              <button
+                className={role.id === primaryTabId ? "editor-tab is-active" : "editor-tab"}
+                key={role.id}
+                onClick={() => setPrimaryTabId(role.id)}
+                type="button"
+              >
+                <span className="tab-dot" />
+                <span>{session?.title ?? `${role.name}.chat`}</span>
+              </button>
+            ))}
+            <button className="editor-tab add-tab" type="button">
+              <span>+</span>
+            </button>
           </div>
 
-          {loadingWorkspace ? <p className="empty-state">正在載入角色工作牆...</p> : null}
+          <div className="split-tabs">
+            <div className="split-tab-strip">
+              {roleWindows.map(({ role }) => (
+                <button
+                  className={role.id === primaryTabId ? "split-tab is-active" : "split-tab"}
+                  key={`primary-${role.id}`}
+                  onClick={() => setPrimaryTabId(role.id)}
+                  type="button"
+                >
+                  {role.name}
+                </button>
+              ))}
+            </div>
+            <div className="split-tab-strip">
+              {roleWindows.map(({ role }) => (
+                <button
+                  className={role.id === secondaryTabId ? "split-tab is-active" : "split-tab"}
+                  key={`secondary-${role.id}`}
+                  onClick={() => setSecondaryTabId(role.id)}
+                  type="button"
+                >
+                  {role.name}
+                </button>
+              ))}
+            </div>
+          </div>
 
-          <div className="role-chat-grid">
-            {roleWindows.map(({ role, session }) => {
-              const threadId = session?.thread_id ?? "";
-              const messages = threadId ? messagesByThread[threadId] ?? [] : [];
-              const latestMessage = messages[messages.length - 1] ?? null;
-              const draft = threadId ? messageDrafts[threadId] ?? "" : "";
-              const isSending = threadId ? submittingMessages[threadId] ?? false : false;
-              const isRunning = threadId ? runningCoWork[threadId] ?? false : false;
-              const statusText = threadId ? coworkStatus[threadId] : null;
-              const provider = getProviderTemplate(session?.provider_site ?? providerSelections[role.id]);
-              const startupPrompt = session?.startup_prompt ?? buildStartupPrompt(project, role);
-              const resolvedWorkspaceUrl = session?.workspace_url || provider.workspaceUrl;
+          <div className="workspace-split">
+            {renderPane(primaryPane, "Pane A")}
+            {renderPane(secondaryPane, "Pane B")}
+          </div>
 
-              return (
-                <article className="role-window" key={role.id}>
-                  <div className="role-window-head">
-                    <div>
-                      <p className="role-window-kicker">{role.role_type}</p>
-                      <h3>{role.name}</h3>
-                    </div>
-                    <div className="role-window-badges">
-                      <span className="mini-badge">{role.status}</span>
-                      <span className={session ? "mini-badge ready" : "mini-badge idle"}>
-                        {session ? "已綁定" : "未建立"}
-                      </span>
-                    </div>
+          <section className="bottom-panel">
+            <div className="bottom-panel-tabs">
+              <button
+                className={bottomView === "cowork" ? "bottom-tab is-active" : "bottom-tab"}
+                onClick={() => setBottomView("cowork")}
+                type="button"
+              >
+                CoWork
+              </button>
+              <button
+                className={bottomView === "logs" ? "bottom-tab is-active" : "bottom-tab"}
+                onClick={() => setBottomView("logs")}
+                type="button"
+              >
+                Logs
+              </button>
+              <button
+                className={bottomView === "handover" ? "bottom-tab is-active" : "bottom-tab"}
+                onClick={() => setBottomView("handover")}
+                type="button"
+              >
+                Handover
+              </button>
+            </div>
+
+            {bottomView === "cowork" ? (
+              <div className="bottom-panel-body cowork-panel">
+                <div className="panel-column">
+                  <div className="panel-column-head">
+                    <strong>CoWork Channel</strong>
+                    <span>{coworkMessages.length} updates</span>
                   </div>
-
-                  <p className="role-window-description">{role.description}</p>
-
-                  {session ? (
-                    <>
-                      <div className="session-workspace-card">
-                        <div className="session-workspace-head">
-                          <strong>{provider.label}</strong>
-                          <span>{session.launch_mode === "external_tab" ? "外部工作視窗" : session.launch_mode}</span>
+                  <div className="timeline-list">
+                    {coworkMessages.length === 0 ? (
+                      <p className="empty-state">No shared updates yet.</p>
+                    ) : null}
+                    {coworkMessages.map((message) => (
+                      <article className="timeline-entry" key={message.id}>
+                        <div className="timeline-avatar">{message.sender_type.slice(0, 1).toUpperCase()}</div>
+                        <div>
+                          <div className="timeline-head">
+                            <strong>{message.sender_type}</strong>
+                            <span>{formatTime(message.created_at)}</span>
+                          </div>
+                          <p>{message.content_text}</p>
                         </div>
-                        <p>{provider.guidance}</p>
-                        <div className="role-window-meta">
-                          <span>Session：{session.session_type}</span>
-                          <span>訊息數：{messages.length}</span>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+                <div className="panel-column participants-panel">
+                  <div className="panel-column-head">
+                    <strong>Participants</strong>
+                    <span>{roleWindows.length}</span>
+                  </div>
+                  <div className="participant-list">
+                    {roleWindows.map(({ role, session }) => {
+                      const tone = getStatusTone(session?.status ?? role.status);
+                      return (
+                        <div className="participant-row" key={role.id}>
+                          <div className={`participant-avatar tone-${tone}`}>{role.name.slice(0, 1)}</div>
+                          <div>
+                            <strong>{role.name}</strong>
+                            <span>{session?.status ?? role.status}</span>
+                          </div>
                         </div>
-                        <div className="role-window-actions">
-                          <button
-                            className="secondary-button"
-                            onClick={() => {
-                              if (resolvedWorkspaceUrl) {
-                                window.open(resolvedWorkspaceUrl, "_blank", "noopener,noreferrer");
-                              }
-                            }}
-                            type="button"
-                          >
-                            開啟 {provider.label}
-                          </button>
-                          <button
-                            className="secondary-button"
-                            onClick={() => void copyPrompt(startupPrompt, `${role.name} 的啟動提示已複製。`)}
-                            type="button"
-                          >
-                            複製啟動提示
-                          </button>
-                        </div>
-                        <pre className="prompt-preview">{startupPrompt}</pre>
-                      </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
-                      {statusText ? <p className="status-banner compact">{statusText}</p> : null}
+            {bottomView === "logs" ? (
+              <div className="bottom-panel-body">
+                <div className="log-grid">
+                  <div className="log-card">
+                    <strong>Workspace Status</strong>
+                    <span>{loadingWorkspace ? "Loading" : "Synced"}</span>
+                    <span>{externalChatSessions} role windows linked</span>
+                  </div>
+                  <div className="log-card">
+                    <strong>Decision Queue</strong>
+                    <span>{decisions.length} items</span>
+                    <span>{decisions.filter((entry) => entry.status === "approved").length} approved</span>
+                  </div>
+                  <div className="log-card">
+                    <strong>Memory Index</strong>
+                    <span>{memories.length} tracked</span>
+                    <span>{memories.filter((entry) => entry.status === "locked").length} locked</span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
 
-                      <div className="role-window-stream">
-                        {loadingMessages && messages.length === 0 ? (
-                          <p className="empty-state">正在同步工作摘記...</p>
-                        ) : null}
-                        {messages.length === 0 ? (
-                          <p className="empty-state">這個角色已綁定外部 Chat，現在可以開始派工與記錄進度。</p>
-                        ) : null}
-                        {messages.slice(-4).map((message) => (
-                          <article className="chat-line" key={message.id}>
-                            <div className="chat-line-head">
-                              <span className="message-chip">{message.sender_type}</span>
-                              <span className="mini-meta">{formatTime(message.created_at)}</span>
-                            </div>
-                            <p>{message.content_text}</p>
-                          </article>
-                        ))}
-                      </div>
-
-                      <div className="role-window-summary">
-                        <strong>目前狀態</strong>
-                        <p>{latestMessage ? latestMessage.content_text : "尚未收到角色回報。"}</p>
-                      </div>
-
-                      <label className="field">
-                        <span>記錄這個角色從外部 Chat 帶回來的工作摘記</span>
-                        <textarea
-                          rows={4}
-                          value={draft}
-                          onChange={(event) => updateDraft(threadId, event.target.value)}
-                          placeholder={`把 ${role.name} 在外部 chat 的結果、摘要或下一步記錄回 CORTEX`}
-                        />
-                      </label>
-
-                      <div className="role-window-actions">
-                        <button
-                          className="primary-button"
-                          disabled={isSending}
-                          onClick={() => void handleSendMessage(session)}
-                          type="button"
-                        >
-                          {isSending ? "寫入中..." : "寫回 CORTEX 記錄"}
-                        </button>
-                        <button
-                          className="secondary-button"
-                          disabled={isRunning}
-                          onClick={() => void handleRunCoWork(session)}
-                          type="button"
-                        >
-                          {isRunning ? "執行中..." : "執行 CoWork"}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="role-window-empty">
-                      <div className="field">
-                        <span>選擇這個角色要使用的 Chat 工作站</span>
-                        <select
-                          className="provider-select"
-                          value={providerSelections[role.id] ?? PROVIDER_TEMPLATES[0].key}
-                          onChange={(event) => updateProviderSelection(role.id, event.target.value)}
-                        >
-                          {PROVIDER_TEMPLATES.map((entry) => (
-                            <option key={entry.key} value={entry.key}>
-                              {entry.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <p>{provider.guidance}</p>
-                      <pre className="prompt-preview">{startupPrompt}</pre>
-                      <button
-                        className="primary-button"
-                        disabled={creatingRoleSessionId === role.id}
-                        onClick={() => void handleCreateRoleSession(role)}
-                        type="button"
-                      >
-                        {creatingRoleSessionId === role.id
-                          ? "建立中..."
-                          : `建立 ${provider.label} 工作視窗`}
-                      </button>
-                    </div>
-                  )}
-                </article>
-              );
-            })}
-          </div>
+            {bottomView === "handover" ? (
+              <div className="bottom-panel-body handover-panel">
+                <div className="handover-card">
+                  <strong>Latest Decision</strong>
+                  <p>{decisions[0]?.summary ?? "No decisions yet."}</p>
+                </div>
+                <div className="handover-card">
+                  <strong>Latest Memory</strong>
+                  <p>{memories[0]?.content ?? "No memory snapshot yet."}</p>
+                </div>
+                <div className="handover-card">
+                  <strong>Next Operator Note</strong>
+                  <p>
+                    Continue from this shell by selecting a role tab, reviewing governance, and sending the next
+                    instruction into the active workspace.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+          </section>
         </section>
 
-        <aside className="workspace-sidepanel">
-          <section className="surface stack-gap">
-            <div className="surface-header">
-              <div>
-                <p className="section-kicker">治理</p>
-                <h2>決策板</h2>
-              </div>
-              <span className="section-meta">{decisions.length} 筆</span>
-            </div>
+        <aside className="governance-sidebar">
+          <div className="governance-head">
+            <strong>Governance</strong>
+            <span>Decision / Memory / Constitution</span>
+          </div>
 
+          <section className="governance-section">
+            <div className="governance-section-head">
+              <strong>Decision Board</strong>
+              <span>{decisions.length}</span>
+            </div>
             <form className="compact-form" onSubmit={handleCreateDecision}>
               <label className="field">
-                <span>決策標題</span>
+                <span>Decision title</span>
                 <input
                   value={decisionTitle}
                   onChange={(event) => setDecisionTitle(event.target.value)}
-                  placeholder="例如：以多角色外部 Chat 方式推進第一階段"
+                  placeholder="Confirm shell layout, sync rule, launch policy..."
                 />
               </label>
               <label className="field">
-                <span>決策摘要</span>
+                <span>Decision summary</span>
                 <textarea
-                  rows={4}
+                  rows={3}
                   value={decisionSummary}
                   onChange={(event) => setDecisionSummary(event.target.value)}
-                  placeholder="記下採用原因、適用範圍與限制"
+                  placeholder="Capture the exact governance or product decision..."
                 />
               </label>
               <button className="secondary-button" disabled={creatingDecision} type="submit">
-                {creatingDecision ? "建立中..." : "新增決策"}
+                {creatingDecision ? "Creating..." : "Create Decision"}
               </button>
             </form>
-
-            <div className="context-list">
-              {decisions.map((decision) => (
-                <article className="context-card" key={decision.id}>
-                  <div className="context-card-head">
+            <div className="governance-list">
+              {decisions.map((decision) => {
+                const tone = getDecisionTone(decision.status);
+                return (
+                  <article className="governance-card" key={decision.id}>
+                    <div className="governance-card-head">
+                      <span className={`status-tag tone-${tone}`}>{decision.status}</span>
+                      <span>{formatTime(decision.created_at)}</span>
+                    </div>
                     <strong>{decision.title}</strong>
-                    <span>{decision.status}</span>
-                  </div>
-                  <p>{decision.summary}</p>
-                  <div className="context-card-foot">
-                    <span>{decision.approved_by ? `核准者：${decision.approved_by}` : "待核准"}</span>
+                    <p>{decision.summary}</p>
                     {decision.status !== "approved" ? (
                       <button
                         className="text-button"
                         onClick={() => void handleApproveDecision(decision.id)}
                         type="button"
                       >
-                        核准
+                        Approve
                       </button>
                     ) : null}
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </section>
 
-          <section className="surface stack-gap">
-            <div className="surface-header">
-              <div>
-                <p className="section-kicker">記憶</p>
-                <h2>專案記憶庫</h2>
-              </div>
-              <span className="section-meta">{memories.length} 筆</span>
+          <section className="governance-section">
+            <div className="governance-section-head">
+              <strong>Memory Snapshot</strong>
+              <span>{memories.length}</span>
             </div>
-
-            <div className="context-list">
-              {memories.map((memory) => (
-                <article className="context-card" key={memory.id}>
-                  <div className="context-card-head">
-                    <strong>{memory.memory_type}</strong>
-                    <span>{memory.status}</span>
-                  </div>
-                  <p>{memory.content}</p>
-                  <div className="context-card-foot">
-                    <span>{memory.approved_by ? `核准者：${memory.approved_by}` : "尚未核准"}</span>
-                    <div className="inline-actions">
-                      {memory.status === "draft" ? (
-                        <button
-                          className="text-button"
-                          onClick={() => void handleTransitionMemory(memory.id, "verified")}
-                          type="button"
-                        >
-                          驗證
-                        </button>
-                      ) : null}
-                      {memory.status === "verified" ? (
-                        <button
-                          className="text-button"
-                          onClick={() => void handleTransitionMemory(memory.id, "locked")}
-                          type="button"
-                        >
-                          鎖定
-                        </button>
-                      ) : null}
-                      {memory.status !== "archived" ? (
-                        <button
-                          className="text-button"
-                          onClick={() => void handleTransitionMemory(memory.id, "archived")}
-                          type="button"
-                        >
-                          封存
-                        </button>
-                      ) : null}
+            <div className="governance-list">
+              {memories.map((memory) => {
+                const nextAction = getMemoryNextAction(memory.status);
+                return (
+                  <article className="governance-card" key={memory.id}>
+                    <div className="governance-card-head">
+                      <span className="status-tag">{memory.status}</span>
+                      <span>{memory.memory_type}</span>
                     </div>
-                  </div>
-                </article>
-              ))}
+                    <p>{memory.content}</p>
+                    {nextAction ? (
+                      <button
+                        className="text-button"
+                        onClick={() => void handleTransitionMemory(memory.id, nextAction.value)}
+                        type="button"
+                      >
+                        {nextAction.label}
+                      </button>
+                    ) : null}
+                  </article>
+                );
+              })}
             </div>
           </section>
 
-          <section className="surface stack-gap">
-            <div className="surface-header">
-              <div>
-                <p className="section-kicker">規則</p>
-                <h2>Constitution</h2>
-              </div>
-              <span className="section-meta">{rules.length} 條</span>
+          <section className="governance-section">
+            <div className="governance-section-head">
+              <strong>Constitution</strong>
+              <span>{rules.length}</span>
             </div>
-
-            <div className="context-list">
+            <div className="governance-list">
               {rules.slice(0, 6).map((rule) => (
-                <article className="context-card" key={rule.id}>
-                  <div className="context-card-head">
-                    <strong>{rule.rule_code}</strong>
-                    <span>{rule.severity}</span>
+                <article className="governance-card" key={rule.id}>
+                  <div className="governance-card-head">
+                    <span className="status-tag">{rule.severity}</span>
+                    <span>{rule.rule_code}</span>
                   </div>
+                  <strong>{rule.name}</strong>
                   <p>{rule.description}</p>
                 </article>
               ))}
