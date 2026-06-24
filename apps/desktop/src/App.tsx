@@ -1396,7 +1396,6 @@ export function App() {
   if (stage !== "workspace") {
     return (
       <main className="desktop-shell onboarding-mode">
-        {message ? <p className="status-banner">{message}</p> : null}
         {error ? <p className="error-banner">{error}</p> : null}
         {renderOnboarding()}
       </main>
@@ -1416,7 +1415,6 @@ export function App() {
         </div>
       </header>
 
-      {message ? <p className="status-banner">{message}</p> : null}
       {error ? <p className="error-banner">{error}</p> : null}
 
       <section className="workbench-shell">
@@ -1642,6 +1640,7 @@ export function App() {
           <span>常駐 {pinnedRoleIds.length} 項</span>
         </div>
         <div className="statusbar-right">
+          {message ? <span>{message}</span> : null}
           <span>預設 AI：{providerConfig(defaultProvider).label}</span>
           <span>CoWork 常駐</span>
           <span>{activeProject?.name ?? "CORTEX"}</span>
