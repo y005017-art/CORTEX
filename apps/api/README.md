@@ -84,11 +84,3 @@ Current default provider:
 ```text
 deterministic
 ```
-
-OpenAI provider env vars:
-
-```text
-OPENAI_API_KEY
-OPENAI_MODEL=gpt-5.5
-OPENAI_EMBEDDING_MODEL=text-embedding-3-small
-```
