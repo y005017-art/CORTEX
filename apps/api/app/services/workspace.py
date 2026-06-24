@@ -47,6 +47,10 @@ class WorkspaceService:
         title: str,
         session_type: str,
         role_id: str | None,
+        provider_site: str | None,
+        workspace_url: str | None,
+        launch_mode: str,
+        startup_prompt: str | None,
     ) -> ChatSession:
         self.get_project(project_id)
         thread = self.threads.create(project_id=project_id, title=title)
@@ -56,6 +60,10 @@ class WorkspaceService:
             title=title,
             session_type=session_type,
             role_id=role_id,
+            provider_site=provider_site,
+            workspace_url=workspace_url,
+            launch_mode=launch_mode,
+            startup_prompt=startup_prompt,
         )
 
     def get_chat_session(self, session_id: str) -> ChatSession:

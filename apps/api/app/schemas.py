@@ -36,6 +36,10 @@ class ChatSessionCreate(BaseModel):
     title: str = Field(min_length=1, max_length=160)
     session_type: str = Field(default="group_chat", min_length=1, max_length=32)
     role_id: str | None = None
+    provider_site: str | None = Field(default=None, max_length=32)
+    workspace_url: str | None = None
+    launch_mode: str = Field(default="external_tab", min_length=1, max_length=32)
+    startup_prompt: str | None = None
 
 
 class ChatSessionRead(BaseModel):
@@ -45,6 +49,10 @@ class ChatSessionRead(BaseModel):
     title: str
     session_type: str
     role_id: str | None
+    provider_site: str | None
+    workspace_url: str | None
+    launch_mode: str
+    startup_prompt: str | None
     status: str
     created_at: datetime
 

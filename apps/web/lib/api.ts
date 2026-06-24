@@ -71,6 +71,10 @@ export type ChatSession = {
   title: string;
   session_type: string;
   role_id: string | null;
+  provider_site: string | null;
+  workspace_url: string | null;
+  launch_mode: string;
+  startup_prompt: string | null;
   status: string;
   created_at: string;
 };
@@ -185,7 +189,15 @@ export async function listChatSessions(projectId: string): Promise<ChatSession[]
 
 export async function createChatSession(
   projectId: string,
-  input: { title: string; session_type?: string; role_id?: string }
+  input: {
+    title: string;
+    session_type?: string;
+    role_id?: string;
+    provider_site?: string;
+    workspace_url?: string;
+    launch_mode?: string;
+    startup_prompt?: string;
+  }
 ): Promise<ChatSession> {
   return request<ChatSession>(`/projects/${projectId}/chat-sessions`, {
     method: "POST",

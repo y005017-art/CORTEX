@@ -209,7 +209,8 @@ a {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.provider-select {
   width: 100%;
   border: 1px solid var(--surface-border);
   border-radius: 8px;
@@ -221,6 +222,10 @@ a {
 
 .field textarea {
   resize: vertical;
+}
+
+.provider-select {
+  height: 44px;
 }
 
 .primary-button,
@@ -263,7 +268,8 @@ a {
 
 .project-tile,
 .context-card,
-.chat-line {
+.chat-line,
+.session-workspace-card {
   border: 1px solid var(--surface-border);
   border-radius: 8px;
   background: rgba(13, 16, 26, 0.84);
@@ -296,6 +302,16 @@ a {
 
 .workspace-banner {
   margin: 0 0 16px;
+}
+
+.surface-note {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 176, 143, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 176, 143, 0.08);
+  color: var(--accent-strong);
+  line-height: 1.6;
 }
 
 .command-surface {
@@ -387,6 +403,22 @@ a {
   align-content: start;
 }
 
+.session-workspace-card {
+  display: grid;
+  gap: 12px;
+}
+
+.session-workspace-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.session-workspace-head span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .chat-line {
   gap: 10px;
 }
@@ -424,6 +456,18 @@ a {
   margin: 0;
   color: var(--muted);
   line-height: 1.6;
+}
+
+.prompt-preview {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+  font: inherit;
+  line-height: 1.6;
+  white-space: pre-wrap;
 }
 
 .role-window-actions {

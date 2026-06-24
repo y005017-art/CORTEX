@@ -34,6 +34,10 @@ def create_chat_session(
         title=payload.title,
         session_type=payload.session_type,
         role_id=payload.role_id,
+        provider_site=payload.provider_site,
+        workspace_url=payload.workspace_url,
+        launch_mode=payload.launch_mode,
+        startup_prompt=payload.startup_prompt,
     )
 
 

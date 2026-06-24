@@ -31,6 +31,10 @@ class ChatSessionsRepository:
         title: str,
         session_type: str,
         role_id: str | None,
+        provider_site: str | None,
+        workspace_url: str | None,
+        launch_mode: str,
+        startup_prompt: str | None,
     ) -> ChatSession:
         session = ChatSession(
             project_id=project_id,
@@ -38,6 +42,10 @@ class ChatSessionsRepository:
             title=title,
             session_type=session_type,
             role_id=role_id,
+            provider_site=provider_site,
+            workspace_url=workspace_url,
+            launch_mode=launch_mode,
+            startup_prompt=startup_prompt,
         )
         self.db.add(session)
         self.db.commit()

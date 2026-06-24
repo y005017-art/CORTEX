@@ -101,6 +101,10 @@ class ChatSession(Base):
     title: Mapped[str] = mapped_column(String(160), nullable=False)
     session_type: Mapped[str] = mapped_column(String(32), default="group_chat")
     role_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    provider_site: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    workspace_url: Mapped[str | None] = mapped_column(Text(), nullable=True)
+    launch_mode: Mapped[str] = mapped_column(String(32), default="external_tab")
+    startup_prompt: Mapped[str | None] = mapped_column(Text(), nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
 
