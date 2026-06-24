@@ -914,15 +914,15 @@ export function App() {
     if (stage === "login") {
       return (
         <section className="onboarding-screen">
-          <div className="hero-panel">
-            <div className="hero-copy">
+          <div className="login-centered-shell">
+            <div className="login-centered-copy">
               <span className="hero-kicker">CORTEX AI IDE</span>
               <h1>先登入 CORTEX，然後再進入真正的多角色工作台。</h1>
               <p>
                 這裡不是 dashboard，也不是假聊天畫面。登入後會依序進入 AI 帳號登入、專案選擇，最後才進入完整工作區。
               </p>
             </div>
-            <form className="login-card" onSubmit={handleLogin}>
+            <form className="login-card login-card-centered" onSubmit={handleLogin}>
               <div className="card-head">
                 <strong>登入 CORTEX</strong>
                 <span>第一步：進入桌面工作台</span>

@@ -137,6 +137,35 @@ select {
   align-items: center;
 }
 
+.login-centered-shell {
+  width: min(980px, calc(100vw - 48px));
+  min-height: min(820px, calc(100vh - 48px));
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 28px;
+  padding: 56px 48px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(67, 145, 255, 0.18), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(54, 198, 111, 0.12), transparent 28%),
+    linear-gradient(180deg, rgba(18, 25, 35, 0.97), rgba(10, 15, 22, 0.99));
+  box-shadow: var(--shadow);
+}
+
+.login-centered-copy {
+  width: min(100%, 760px);
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.login-centered-copy p {
+  max-width: 760px;
+}
+
 .hero-copy {
   display: grid;
   align-content: center;
@@ -201,6 +230,12 @@ select {
   border-left: 1px solid rgba(255, 255, 255, 0.05);
   width: min(100%, 420px);
   margin: 0 auto;
+}
+
+.login-card-centered {
+  width: min(100%, 460px);
+  margin: 0;
+  border-left: 0;
 }
 
 .card-head {
@@ -1199,6 +1234,11 @@ select {
 
   .hero-panel {
     min-height: auto;
+  }
+
+  .login-centered-shell {
+    min-height: auto;
+    padding: 32px 24px;
   }
 
   .workbench-shell {
