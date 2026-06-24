@@ -45,6 +45,22 @@ FOUNDATION_RULES = [
         "enforcement_action": "BLOCK",
         "severity": "high",
     },
+    {
+        "rule_code": "PR-001",
+        "name": "Provider availability precheck",
+        "scope": "provider",
+        "description": "Provider execution must be blocked when the selected provider is unavailable.",
+        "enforcement_action": "BLOCK",
+        "severity": "high",
+    },
+    {
+        "rule_code": "RB-001",
+        "name": "Restricted provider execution roles",
+        "scope": "provider",
+        "description": "Only approved orchestration roles may invoke provider execution directly.",
+        "enforcement_action": "BLOCK",
+        "severity": "medium",
+    },
 ]
 
 

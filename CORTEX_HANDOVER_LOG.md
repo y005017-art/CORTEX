@@ -603,3 +603,53 @@ Do not overwrite previous entries unless they are factually incorrect.
   - Token counting and embeddings remain placeholder-level for the deterministic provider
 - Next recommended step:
   - Wire live OpenAI execution behind the new adapter boundary, or add a policy-layer precheck service before expanding provider choice and role orchestration
+
+## Session Entry
+
+- Date: 2026-06-24
+- Session focus: Policy precheck service for constitution, provider, and CoWork actions
+- Current phase: Phase 0 / Foundation
+- Completed:
+  - Added a reusable `PolicyService` with `evaluate_action` and `enforce_action`
+  - Moved constitution evaluation into the shared policy service instead of route-local scaffold logic
+  - Added provider availability and restricted-role policy checks
+  - Added CoWork precheck enforcement before provider execution
+  - Added provider validation route that returns governance blocking reasons when a provider is unavailable
+  - Improved frontend API error parsing so policy block reasons render as readable messages
+- In progress:
+  - CORTEX now has a shared governance precheck path that can be reused before more provider and role behavior is added
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Keep early policy results simple with `PASS` and `BLOCK`, while still returning `recommended_next_step`
+  - Enforce provider execution through policy before adapter invocation rather than inside each adapter
+  - Surface policy block payloads through the existing error path instead of building a separate UI flow
+- Files created:
+  - `apps/api/app/policies/__init__.py`
+  - `apps/api/app/policies/service.py`
+- Files updated:
+  - `apps/api/app/bootstrap.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/dependencies.py`
+  - `apps/api/app/api/routes/constitution.py`
+  - `apps/api/app/api/routes/providers.py`
+  - `apps/api/app/services/cowork.py`
+  - `apps/api/app/services/providers.py`
+  - `apps/api/app/main.py`
+  - `apps/web/lib/api.ts`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `py -m compileall app`
+  - `npm run build`
+  - Local deploy verification at `http://127.0.0.1:8000/health`
+  - Local deploy verification at `http://127.0.0.1:3000`
+  - API verification that `POST /constitution/evaluate` blocks locked memory modification with `IL-LOCKED-MEMORY`
+  - API verification that `POST /constitution/evaluate` blocks unavailable provider execution with `PR-001`
+  - API verification that `POST /providers/openai/validate` returns `409` with policy block detail
+  - API verification that CoWork still runs successfully through policy precheck with `provider_key=deterministic`
+- Known risks:
+  - Policy evaluation is still hard-coded in service logic rather than rule-interpreted from stored constitution data
+  - Policy enforcement currently focuses on provider and locked-memory prechecks, not the full future authority matrix
+  - `WARN` paths are not yet modeled as a distinct runtime branch
+- Next recommended step:
+  - Wire live OpenAI execution behind the adapter boundary under the new policy precheck path, or start converting policy decisions from hard-coded logic into rule-driven evaluation inputs

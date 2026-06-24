@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.models import Decision, Message, Thread
+from app.policies.service import PolicyService
 from app.providers.base import ProviderMessage
 from app.providers.registry import ProviderRegistry
 from app.repositories.decisions import DecisionsRepository
@@ -26,9 +27,10 @@ class CoWorkRunResult:
 
 
 class CoWorkService:
-    def __init__(self, db: Session, *, provider_registry: ProviderRegistry):
+    def __init__(self, db: Session, *, provider_registry: ProviderRegistry, policy_service: PolicyService):
         self.db = db
         self.provider_registry = provider_registry
+        self.policy_service = policy_service
         self.projects = ProjectsRepository(db)
         self.threads = ThreadsRepository(db)
         self.messages = MessagesRepository(db)
@@ -69,6 +71,25 @@ class CoWorkService:
             for memory in verified_memories[:3]
         ]
         provider = self.provider_registry.get_default()
+        provider_health = provider.health()
+        self.policy_service.enforce_action(
+            actor_role="CoWork",
+            action_type="run_cowork",
+            target_type="thread",
+            context={
+                "provider_key": provider.provider_key,
+                "provider_available": provider_health.available,
+            },
+        )
+        self.policy_service.enforce_action(
+            actor_role="CoWork",
+            action_type="invoke_provider",
+            target_type="provider",
+            context={
+                "provider_key": provider.provider_key,
+                "provider_available": provider_health.available,
+            },
+        )
         provider_response = provider.send_message(
             messages=[ProviderMessage(role="user", content=goal_message.content_text)],
             system_prompt="You are CoWork. Return structured execution guidance.",

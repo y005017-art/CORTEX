@@ -84,6 +84,7 @@ def root() -> dict[str, object]:
             "/roles",
             "/constitution/rules",
             "/constitution/evaluate",
+            "/providers/{provider_key}/validate",
             "/projects/{project_id}/decisions",
             "/decisions/{decision_id}/approve",
         ],

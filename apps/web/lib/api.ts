@@ -25,8 +25,21 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   if (!response.ok) {
     const contentType = response.headers.get("content-type") ?? "";
     if (contentType.includes("application/json")) {
-      const payload = (await response.json()) as { detail?: string };
-      throw new Error(payload.detail || `Request failed: ${response.status}`);
+      const payload = (await response.json()) as {
+        detail?:
+          | string
+          | { reason?: string; recommended_next_step?: string; rule_code?: string };
+      };
+      if (typeof payload.detail === "string") {
+        throw new Error(payload.detail || `Request failed: ${response.status}`);
+      }
+      if (payload.detail && typeof payload.detail === "object") {
+        const reason = payload.detail.reason ?? "Request was blocked by policy.";
+        const nextStep = payload.detail.recommended_next_step;
+        const ruleCode = payload.detail.rule_code ? ` (${payload.detail.rule_code})` : "";
+        throw new Error(`${reason}${ruleCode}${nextStep ? ` Next: ${nextStep}` : ""}`);
+      }
+      throw new Error(`Request failed: ${response.status}`);
     }
     const message = await response.text();
     throw new Error(message || `Request failed: ${response.status}`);

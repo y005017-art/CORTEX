@@ -95,12 +95,14 @@ class ConstitutionEvaluateRequest(BaseModel):
     actor_role: str
     action_type: str
     target_type: str
+    context: dict[str, str | bool | int | float | None] | None = None
 
 
 class ConstitutionEvaluateResponse(BaseModel):
     status: str
     rule_code: str
     reason: str
+    recommended_next_step: str
 
 
 class ProviderHealthRead(BaseModel):

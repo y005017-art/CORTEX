@@ -23,3 +23,12 @@ def provider_health(
     provider_service: ProviderService = Depends(get_provider_service),
 ) -> ProviderHealthResponse:
     return provider_service.healthcheck()
+
+
+@router.post("/providers/{provider_key}/validate", response_model=ProviderHealthRead)
+def validate_provider(
+    provider_key: str,
+    _: User = Depends(get_current_user),
+    provider_service: ProviderService = Depends(get_provider_service),
+) -> ProviderHealthRead:
+    return provider_service.validate_provider_execution(actor_role="CoWork", provider_key=provider_key)

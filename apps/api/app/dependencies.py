@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Project, Thread, User
+from app.policies.service import PolicyService
 from app.providers.registry import ProviderRegistry
 from app.services.auth import AuthService
 from app.services.cowork import CoWorkService
@@ -43,12 +44,19 @@ def get_provider_registry() -> ProviderRegistry:
     return ProviderRegistry()
 
 
-def get_provider_service(registry: ProviderRegistry = Depends(get_provider_registry)) -> ProviderService:
-    return ProviderService(registry)
+def get_provider_service(
+    db: Session = Depends(get_db),
+    registry: ProviderRegistry = Depends(get_provider_registry),
+) -> ProviderService:
+    return ProviderService(registry, PolicyService(db))
+
+
+def get_policy_service(db: Session = Depends(get_db)) -> PolicyService:
+    return PolicyService(db)
 
 
 def get_cowork_service(db: Session = Depends(get_db)) -> CoWorkService:
-    return CoWorkService(db, provider_registry=ProviderRegistry())
+    return CoWorkService(db, provider_registry=ProviderRegistry(), policy_service=PolicyService(db))
 
 
 def get_memory_service(db: Session = Depends(get_db)) -> MemoryService:
