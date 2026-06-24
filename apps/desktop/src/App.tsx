@@ -462,6 +462,7 @@ export function App() {
   const [providerOverrides, setProviderOverrides] = useState<Record<string, ProviderKey>>({});
   const primaryViewportRef = useRef<HTMLDivElement | null>(null);
   const secondaryViewportRef = useRef<HTMLDivElement | null>(null);
+  const shellClassName = `desktop-shell${stage !== "workspace" ? " onboarding-mode" : ""}${error ? " has-error-banner" : ""}`;
 
   useEffect(() => {
     if (desktopBridge) {
@@ -1395,7 +1396,7 @@ export function App() {
 
   if (stage !== "workspace") {
     return (
-      <main className="desktop-shell onboarding-mode">
+      <main className={shellClassName}>
         {error ? <p className="error-banner">{error}</p> : null}
         {renderOnboarding()}
       </main>
@@ -1403,7 +1404,7 @@ export function App() {
   }
 
   return (
-    <main className="desktop-shell">
+    <main className={shellClassName}>
       <header className="window-frame">
         <div className="window-title">
           <div className="app-cube">C</div>
