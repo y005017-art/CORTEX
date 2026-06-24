@@ -134,6 +134,7 @@ select {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) 420px;
   overflow: hidden;
+  align-items: center;
 }
 
 .hero-copy {
@@ -198,6 +199,8 @@ select {
   gap: 18px;
   padding: 32px;
   border-left: 1px solid rgba(255, 255, 255, 0.05);
+  width: min(100%, 420px);
+  margin: 0 auto;
 }
 
 .card-head {
