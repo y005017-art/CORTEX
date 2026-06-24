@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 
-import { createProject, listProjects, me, Project } from "@/lib/api";
 import { AuthPanel } from "@/components/auth-panel";
+import { createProject, listProjects, me, Project } from "@/lib/api";
 import { AuthUser, clearSession, getStoredUser } from "@/lib/auth";
-
 
 export function ProjectDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -83,27 +82,38 @@ export function ProjectDashboard() {
 
   return (
     <main className="dashboard-shell">
-      <section className="dashboard-hero">
-        <div>
-          <p className="eyebrow">CORTEX 基礎版</p>
-          <h1>工作平台入口</h1>
+      <section className="hero-band">
+        <div className="hero-copy">
+          <p className="eyebrow">CORTEX</p>
+          <h1>多視窗協作工作台</h1>
           <p className="summary">
-            建立專案、進入工作空間，並從第一個結構化聊天視窗開始推進工作。
+            以聊天視窗為核心，整理專案、角色、決策與記憶，讓整個工作流程留在同一個平台內推進。
           </p>
+        </div>
+        <div className="hero-stats">
+          <div className="hero-stat">
+            <strong>{projects.length}</strong>
+            <span>專案</span>
+          </div>
+          <div className="hero-stat">
+            <strong>{currentUser ? "已登入" : "待登入"}</strong>
+            <span>狀態</span>
+          </div>
         </div>
       </section>
 
-      <section className="dashboard-grid">
-        <div className="stack-gap">
+      <section className="dashboard-layout">
+        <div className="dashboard-rail">
           {currentUser ? (
-            <section className="panel stack-gap">
-              <div className="panel-header">
-                <h2>登入狀態</h2>
-                <span>{currentUser.display_name}</span>
+            <section className="surface stack-gap">
+              <div className="surface-header">
+                <div>
+                  <p className="section-kicker">目前帳號</p>
+                  <h2>{currentUser.display_name}</h2>
+                </div>
+                <span className="section-meta">已登入</span>
               </div>
-              <p className="summary compact-summary">
-                目前登入帳號為 {currentUser.email}。已可使用受保護的工作空間功能。
-              </p>
+              <p className="surface-copy">{currentUser.email}</p>
               <button
                 className="secondary-button"
                 onClick={() => {
@@ -120,71 +130,72 @@ export function ProjectDashboard() {
             <AuthPanel onAuthenticated={setCurrentUser} />
           )}
 
-          <form className="panel stack-gap" onSubmit={handleSubmit}>
-            <div className="panel-header">
-              <h2>建立專案</h2>
-              <span>專案管理</span>
+          <form className="surface stack-gap" onSubmit={handleSubmit}>
+            <div className="surface-header">
+              <div>
+                <p className="section-kicker">新專案</p>
+                <h2>建立工作空間</h2>
+              </div>
+              <span className="section-meta">手動建立</span>
             </div>
 
             <label className="field">
-              <span>名稱</span>
+              <span>專案名稱</span>
               <input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="CORTEX 核心 MVP"
+                placeholder="例如：CORTEX 核心工作台"
               />
             </label>
 
             <label className="field">
-              <span>描述</span>
+              <span>專案描述</span>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
-                placeholder="可填入目前目標、驗證內容或正在進行的產品工作"
+                placeholder="可填入目前目標、工作範圍或驗證用途"
                 rows={4}
               />
             </label>
 
             {error ? <p className="error-text">{error}</p> : null}
 
-            <button
-              className="primary-button"
-              disabled={submitting || !currentUser}
-              type="submit"
-            >
+            <button className="primary-button" disabled={submitting || !currentUser} type="submit">
               {submitting ? "建立中..." : "建立專案"}
             </button>
           </form>
         </div>
 
-        <section className="panel stack-gap">
-          <div className="panel-header">
-            <h2>專案清單</h2>
-            <span>{loading ? "載入中" : `共 ${projects.length} 個`}</span>
+        <section className="surface project-hub">
+          <div className="surface-header">
+            <div>
+              <p className="section-kicker">工作台入口</p>
+              <h2>專案總覽</h2>
+            </div>
+            <span className="section-meta">{loading ? "載入中" : `共 ${projects.length} 個`}</span>
           </div>
 
-          <div className="project-list">
-            {loading ? <p className="empty-state">正在載入專案...</p> : null}
+          {loading ? <p className="empty-state">正在載入專案...</p> : null}
 
-            {!loading && currentUser && projects.length === 0 ? (
-              <p className="empty-state">目前還沒有專案，先建立第一個專案。</p>
-            ) : null}
+          {!loading && currentUser && projects.length === 0 ? (
+            <p className="empty-state">目前還沒有專案，先建立第一個工作空間。</p>
+          ) : null}
 
-            {!loading && !currentUser ? (
-              <p className="empty-state">請先登入以讀取受保護的專案。</p>
-            ) : null}
+          {!loading && !currentUser ? (
+            <p className="empty-state">請先登入，才能載入受保護的專案。</p>
+          ) : null}
 
+          <div className="project-grid">
             {projects.map((project) => (
-              <Link
-                className="project-card"
-                href={`/projects/${project.id}`}
-                key={project.id}
-              >
-                <div className="project-card-header">
+              <Link className="project-tile" href={`/projects/${project.id}`} key={project.id}>
+                <div className="project-tile-head">
                   <strong>{project.name}</strong>
                   <span>{project.status}</span>
                 </div>
                 <p>{project.description || "尚未填寫描述。"}</p>
+                <div className="project-tile-foot">
+                  <span>進入工作台</span>
+                </div>
               </Link>
             ))}
           </div>

@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { WorkspaceRouteClient } from "@/components/workspace-route-client";
 
-
 type ProjectPageProps = {
   params: Promise<{ projectId: string }>;
 };

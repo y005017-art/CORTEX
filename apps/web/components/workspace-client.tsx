@@ -100,7 +100,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       setRules(ruleData);
       setMemories(memoryData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "載入工作空間面板失敗。");
+      setError(err instanceof Error ? err.message : "載入工作台側欄失敗。");
     } finally {
       setLoadingPanels(false);
     }
@@ -148,7 +148,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   async function handleCreateMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedThreadId) {
-      setError("請先建立聊天視窗再發送訊息。");
+      setError("請先建立或選擇聊天視窗。");
       return;
     }
 
@@ -249,21 +249,38 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
   return (
     <main className="workspace-shell">
-      <section className="workspace-header">
+      <section className="workspace-topbar">
         <div>
-          <p className="eyebrow">工作空間</p>
+          <p className="eyebrow">CORTEX 工作台</p>
           <h1>{project.name}</h1>
           <p className="summary">
-            {project.description || "這是目前連接 CORTEX API 的結構化工作空間。"}
+            {project.description || "以多視窗聊天為主軸，整理工作脈絡、決策與記憶。"}
           </p>
+        </div>
+        <div className="workspace-stats">
+          <div className="stat-card">
+            <strong>{chatSessions.length}</strong>
+            <span>聊天視窗</span>
+          </div>
+          <div className="stat-card">
+            <strong>{decisions.length}</strong>
+            <span>決策</span>
+          </div>
+          <div className="stat-card">
+            <strong>{memories.length}</strong>
+            <span>記憶</span>
+          </div>
         </div>
       </section>
 
-      <section className="workspace-grid workspace-grid-wide">
-        <aside className="panel sidebar stack-gap">
-          <div className="panel-header">
-            <h2>聊天視窗</h2>
-            <span>共 {chatSessions.length} 個</span>
+      <section className="workspace-platform">
+        <aside className="surface workspace-column window-column">
+          <div className="surface-header">
+            <div>
+              <p className="section-kicker">視窗總覽</p>
+              <h2>聊天視窗</h2>
+            </div>
+            <span className="section-meta">共 {chatSessions.length} 個</span>
           </div>
 
           <form className="stack-gap compact-form" onSubmit={handleCreateChatSession}>
@@ -275,43 +292,47 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                 placeholder="例如：主規劃視窗"
               />
             </label>
-
             <button className="secondary-button" disabled={submittingSession} type="submit">
               {submittingSession ? "建立中..." : "建立視窗"}
             </button>
           </form>
 
-          <div className="thread-list">
+          <div className="window-list">
             {loadingSessions ? <p className="empty-state">正在載入聊天視窗...</p> : null}
-
             {!loadingSessions && chatSessions.length === 0 ? (
               <p className="empty-state">目前還沒有聊天視窗。</p>
             ) : null}
-
             {chatSessions.map((session) => (
               <button
-                className={session.id === selectedSessionId ? "thread-item active" : "thread-item"}
+                className={session.id === selectedSessionId ? "window-card active" : "window-card"}
                 key={session.id}
                 onClick={() => setSelectedSessionId(session.id)}
                 type="button"
               >
-                <strong>{session.title}</strong>
-                <span>{session.session_type}</span>
+                <div className="window-card-head">
+                  <strong>{session.title}</strong>
+                  <span>{session.status}</span>
+                </div>
+                <p>{session.session_type === "group_chat" ? "群組視窗" : session.session_type}</p>
               </button>
             ))}
           </div>
         </aside>
 
-        <section className="panel conversation stack-gap">
-          <div className="panel-header">
-            <h2>{selectedSession?.title ?? "群組對話"}</h2>
-            <span>{selectedSession ? selectedSession.status : "尚未選擇視窗"}</span>
+        <section className="surface workspace-column active-column">
+          <div className="surface-header">
+            <div>
+              <p className="section-kicker">目前視窗</p>
+              <h2>{selectedSession?.title ?? "尚未選擇視窗"}</h2>
+            </div>
+            <span className="section-meta">{selectedSession?.status ?? "待選擇"}</span>
           </div>
 
-          <div className="inline-actions">
-            <span className="mini-meta">
-              執行 CoWork，分析這個視窗中的最新使用者目標。
-            </span>
+          <div className="active-toolbar">
+            <div className="active-toolbar-copy">
+              <strong>工作流</strong>
+              <span>在目前視窗推進目標、分析與後續決策。</span>
+            </div>
             <button
               className="secondary-button"
               disabled={!selectedSession || runningCoWork}
@@ -322,35 +343,39 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
             </button>
           </div>
 
-          {coworkStatus ? <p className="mini-meta">{coworkStatus}</p> : null}
-
+          {coworkStatus ? <p className="status-banner">{coworkStatus}</p> : null}
           {error ? <p className="error-text">{error}</p> : null}
 
-          <div className="message-stream">
-            {loadingMessages ? <p className="empty-state">正在載入訊息...</p> : null}
+          <div className="message-surface">
+            <div className="message-surface-head">
+              <h3>訊息流</h3>
+              <span>{messages.length} 則</span>
+            </div>
 
+            {loadingMessages ? <p className="empty-state">正在載入訊息...</p> : null}
             {!loadingMessages && !selectedSession ? (
               <p className="empty-state">請先建立或選擇聊天視窗。</p>
             ) : null}
-
             {!loadingMessages && selectedSession && messages.length === 0 ? (
               <p className="empty-state">目前還沒有訊息，先送出第一個目標。</p>
             ) : null}
 
-            {messages.map((message) => (
-              <article className="message-card" key={message.id}>
-                <div className="message-meta">
-                  <strong>{message.sender_type}</strong>
-                  <span>{message.message_type}</span>
-                </div>
-                <p>{message.content_text}</p>
-              </article>
-            ))}
+            <div className="message-list">
+              {messages.map((message) => (
+                <article className="message-entry" key={message.id}>
+                  <div className="message-entry-head">
+                    <span className="message-chip">{message.sender_type}</span>
+                    <span className="message-chip muted">{message.message_type}</span>
+                  </div>
+                  <p>{message.content_text}</p>
+                </article>
+              ))}
+            </div>
           </div>
 
-          <form className="composer" onSubmit={handleCreateMessage}>
+          <form className="composer-surface" onSubmit={handleCreateMessage}>
             <label className="field">
-              <span>訊息</span>
+              <span>輸入訊息</span>
               <textarea
                 disabled={!selectedSession}
                 onChange={(event) => setMessageDraft(event.target.value)}
@@ -359,7 +384,6 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                 value={messageDraft}
               />
             </label>
-
             <button
               className="primary-button"
               disabled={!selectedSession || submittingMessage}
@@ -370,11 +394,14 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
           </form>
         </section>
 
-        <aside className="panel detail-sidebar stack-gap">
-          <section className="stack-gap">
-            <div className="panel-header">
-              <h2>決策</h2>
-              <span>共 {decisions.length} 筆</span>
+        <aside className="workspace-column context-column">
+          <section className="surface stack-gap">
+            <div className="surface-header">
+              <div>
+                <p className="section-kicker">工作脈絡</p>
+                <h2>決策</h2>
+              </div>
+              <span className="section-meta">共 {decisions.length} 筆</span>
             </div>
 
             <form className="compact-form" onSubmit={handleCreateDecision}>
@@ -386,7 +413,6 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                   value={decisionTitle}
                 />
               </label>
-
               <label className="field">
                 <span>摘要</span>
                 <textarea
@@ -396,23 +422,22 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                   value={decisionSummary}
                 />
               </label>
-
               <button className="secondary-button" disabled={submittingDecision} type="submit">
                 {submittingDecision ? "建立中..." : "建立決策"}
               </button>
             </form>
 
-            <div className="stack-gap">
+            <div className="context-list">
               {loadingPanels ? <p className="empty-state">正在載入決策...</p> : null}
               {decisions.map((decision) => (
-                <article className="message-card" key={decision.id}>
-                  <div className="message-meta">
+                <article className="context-card" key={decision.id}>
+                  <div className="context-card-head">
                     <strong>{decision.title}</strong>
                     <span>{decision.status}</span>
                   </div>
                   <p>{decision.summary}</p>
-                  <div className="inline-actions">
-                    <span className="mini-meta">
+                  <div className="context-card-foot">
+                    <span>
                       {decision.approved_by
                         ? `核准者：${decision.approved_by}`
                         : `提案者：${decision.proposed_by ?? "未知"}`}
@@ -432,68 +457,29 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
             </div>
           </section>
 
-          <section className="stack-gap">
-            <div className="panel-header">
-              <h2>角色</h2>
-              <span>共 {roles.length} 個</span>
+          <section className="surface stack-gap">
+            <div className="surface-header">
+              <div>
+                <p className="section-kicker">工作脈絡</p>
+                <h2>記憶</h2>
+              </div>
+              <span className="section-meta">共 {memories.length} 筆</span>
             </div>
-            <div className="stack-gap">
-              {loadingPanels ? <p className="empty-state">正在載入角色...</p> : null}
-              {roles.map((role) => (
-                <article className="message-card" key={role.id}>
-                  <div className="message-meta">
-                    <strong>{role.name}</strong>
-                    <span>{role.role_type}</span>
-                  </div>
-                  <p>{role.description ?? "尚無描述。"}</p>
-                </article>
-              ))}
-            </div>
-          </section>
 
-          <section className="stack-gap">
-            <div className="panel-header">
-              <h2>憲章規則</h2>
-              <span>共 {rules.length} 條</span>
-            </div>
-            <div className="stack-gap">
-              {loadingPanels ? <p className="empty-state">正在載入規則...</p> : null}
-              {rules.map((rule) => (
-                <article className="message-card" key={rule.id}>
-                  <div className="message-meta">
-                    <strong>{rule.rule_code}</strong>
-                    <span>{rule.enforcement_action}</span>
-                  </div>
-                  <p>{rule.description}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="stack-gap">
-            <div className="panel-header">
-              <h2>記憶</h2>
-              <span>共 {memories.length} 筆</span>
-            </div>
-            <div className="stack-gap">
+            <div className="context-list">
               {loadingPanels ? <p className="empty-state">正在載入記憶...</p> : null}
               {memories.map((memory) => (
-                <article className="message-card" key={memory.id}>
-                  <div className="message-meta">
+                <article className="context-card" key={memory.id}>
+                  <div className="context-card-head">
                     <strong>{memory.memory_type}</strong>
                     <span>{memory.status}</span>
                   </div>
                   <p>{memory.content}</p>
-                  <span className="mini-meta">
-                    {memory.approved_by
-                      ? `核准者：${memory.approved_by}`
-                      : "等待核准資訊"}
-                  </span>
-                  <div className="inline-actions">
-                    <span className="mini-meta">
-                      {memory.source_decision_id
-                        ? `決策 ${memory.source_decision_id.slice(0, 8)}`
-                        : "手動來源"}
+                  <div className="context-card-foot">
+                    <span>
+                      {memory.approved_by
+                        ? `核准者：${memory.approved_by}`
+                        : "等待核准資訊"}
                     </span>
                     <div className="inline-actions">
                       {memory.status === "verified" ? (
@@ -525,6 +511,52 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
                       ) : null}
                     </div>
                   </div>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="surface stack-gap">
+            <div className="surface-header">
+              <div>
+                <p className="section-kicker">角色與治理</p>
+                <h2>角色</h2>
+              </div>
+              <span className="section-meta">共 {roles.length} 個</span>
+            </div>
+
+            <div className="context-list">
+              {loadingPanels ? <p className="empty-state">正在載入角色...</p> : null}
+              {roles.map((role) => (
+                <article className="context-card" key={role.id}>
+                  <div className="context-card-head">
+                    <strong>{role.name}</strong>
+                    <span>{role.role_type}</span>
+                  </div>
+                  <p>{role.description ?? "尚無描述。"}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="surface stack-gap">
+            <div className="surface-header">
+              <div>
+                <p className="section-kicker">角色與治理</p>
+                <h2>憲章規則</h2>
+              </div>
+              <span className="section-meta">共 {rules.length} 條</span>
+            </div>
+
+            <div className="context-list">
+              {loadingPanels ? <p className="empty-state">正在載入規則...</p> : null}
+              {rules.map((rule) => (
+                <article className="context-card" key={rule.id}>
+                  <div className="context-card-head">
+                    <strong>{rule.rule_code}</strong>
+                    <span>{rule.enforcement_action}</span>
+                  </div>
+                  <p>{rule.description}</p>
                 </article>
               ))}
             </div>

@@ -5,7 +5,6 @@ import { FormEvent, useState } from "react";
 import { login, register } from "@/lib/api";
 import { AuthUser, storeSession } from "@/lib/auth";
 
-
 type AuthPanelProps = {
   onAuthenticated: (user: AuthUser) => void;
 };
@@ -37,10 +36,13 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
   }
 
   return (
-    <section className="panel stack-gap">
-      <div className="panel-header">
-        <h2>{mode === "login" ? "登入" : "註冊"}</h2>
-        <span>本機驗證</span>
+    <section className="surface stack-gap">
+      <div className="surface-header">
+        <div>
+          <p className="section-kicker">帳號</p>
+          <h2>{mode === "login" ? "登入 CORTEX" : "建立 CORTEX 帳號"}</h2>
+        </div>
+        <span className="section-meta">本機驗證</span>
       </div>
 
       <form className="stack-gap" onSubmit={handleSubmit}>
@@ -81,7 +83,7 @@ export function AuthPanel({ onAuthenticated }: AuthPanelProps) {
         onClick={() => setMode(mode === "login" ? "register" : "login")}
         type="button"
       >
-        {mode === "login" ? "還沒有帳號？前往註冊" : "已經有帳號？前往登入"}
+        {mode === "login" ? "還沒有帳號？改用註冊" : "已經有帳號？改用登入"}
       </button>
     </section>
   );

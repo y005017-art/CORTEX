@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 
+import { WorkspaceClient } from "@/components/workspace-client";
 import { listProjects, Project } from "@/lib/api";
 import { getStoredToken } from "@/lib/auth";
-import { WorkspaceClient } from "@/components/workspace-client";
-
 
 type WorkspaceRouteClientProps = {
   projectId: string;
@@ -46,7 +45,7 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
   if (loading) {
     return (
       <main className="workspace-shell">
-        <section className="panel">
+        <section className="surface">
           <p className="empty-state">正在載入工作空間...</p>
         </section>
       </main>
@@ -56,7 +55,7 @@ export function WorkspaceRouteClient({ projectId }: WorkspaceRouteClientProps) {
   if (error || !project) {
     return (
       <main className="workspace-shell">
-        <section className="panel">
+        <section className="surface">
           <p className="error-text">{error ?? "找不到專案。"}</p>
         </section>
       </main>
