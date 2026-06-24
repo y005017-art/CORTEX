@@ -1,7 +1,8 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.models import Project, Thread
+from app.models import ChatSession, Project, Thread
+from app.repositories.chat_sessions import ChatSessionsRepository
 from app.repositories.messages import MessagesRepository
 from app.repositories.projects import ProjectsRepository
 from app.repositories.threads import ThreadsRepository
@@ -9,8 +10,10 @@ from app.repositories.threads import ThreadsRepository
 
 class WorkspaceService:
     def __init__(self, db: Session):
+        self.db = db
         self.projects = ProjectsRepository(db)
         self.threads = ThreadsRepository(db)
+        self.chat_sessions = ChatSessionsRepository(db)
         self.messages = MessagesRepository(db)
 
     def list_projects(self) -> list[Project]:
@@ -32,6 +35,34 @@ class WorkspaceService:
     def create_thread(self, *, project_id: str, title: str) -> Thread:
         self.get_project(project_id)
         return self.threads.create(project_id=project_id, title=title)
+
+    def list_chat_sessions(self, project_id: str) -> list[ChatSession]:
+        self.get_project(project_id)
+        return self.chat_sessions.list_by_project(project_id)
+
+    def create_chat_session(
+        self,
+        *,
+        project_id: str,
+        title: str,
+        session_type: str,
+        role_id: str | None,
+    ) -> ChatSession:
+        self.get_project(project_id)
+        thread = self.threads.create(project_id=project_id, title=title)
+        return self.chat_sessions.create(
+            project_id=project_id,
+            thread_id=thread.id,
+            title=title,
+            session_type=session_type,
+            role_id=role_id,
+        )
+
+    def get_chat_session(self, session_id: str) -> ChatSession:
+        session = self.chat_sessions.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
+        return session
 
     def get_thread(self, thread_id: str) -> Thread:
         thread = self.threads.get(thread_id)

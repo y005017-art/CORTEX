@@ -4,21 +4,21 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
   approveDecision,
+  ChatSession,
+  createChatSession,
   createMessage,
   createDecision,
-  createThread,
   Decision,
   listMemories,
   listDecisions,
   listRoles,
   listRules,
+  listChatSessions,
   Memory,
   listMessages,
-  listThreads,
   Message,
   Project,
   Role,
-  Thread,
   ConstitutionRule,
   runCoWork,
   transitionMemory,
@@ -30,46 +30,48 @@ type WorkspaceClientProps = {
 };
 
 export function WorkspaceClient({ project }: WorkspaceClientProps) {
-  const [threads, setThreads] = useState<Thread[]>([]);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [rules, setRules] = useState<ConstitutionRule[]>([]);
-  const [threadTitle, setThreadTitle] = useState("");
+  const [sessionTitle, setSessionTitle] = useState("");
   const [messageDraft, setMessageDraft] = useState("");
   const [decisionTitle, setDecisionTitle] = useState("");
   const [decisionSummary, setDecisionSummary] = useState("");
-  const [loadingThreads, setLoadingThreads] = useState(true);
+  const [loadingSessions, setLoadingSessions] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [loadingPanels, setLoadingPanels] = useState(true);
-  const [submittingThread, setSubmittingThread] = useState(false);
+  const [submittingSession, setSubmittingSession] = useState(false);
   const [submittingMessage, setSubmittingMessage] = useState(false);
   const [submittingDecision, setSubmittingDecision] = useState(false);
   const [runningCoWork, setRunningCoWork] = useState(false);
   const [coworkStatus, setCoworkStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedThread = useMemo(
-    () => threads.find((thread) => thread.id === selectedThreadId) ?? null,
-    [selectedThreadId, threads]
+  const selectedSession = useMemo(
+    () => chatSessions.find((session) => session.id === selectedSessionId) ?? null,
+    [selectedSessionId, chatSessions]
   );
 
-  async function refreshThreads(preferredThreadId?: string) {
-    setLoadingThreads(true);
+  const selectedThreadId = selectedSession?.thread_id ?? null;
+
+  async function refreshChatSessions(preferredSessionId?: string) {
+    setLoadingSessions(true);
     try {
-      const data = await listThreads(project.id);
-      setThreads(data);
+      const data = await listChatSessions(project.id);
+      setChatSessions(data);
       const nextSelected =
-        preferredThreadId ??
-        selectedThreadId ??
+        preferredSessionId ??
+        selectedSessionId ??
         (data.length > 0 ? data[0].id : null);
-      setSelectedThreadId(nextSelected);
+      setSelectedSessionId(nextSelected);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load threads.");
+      setError(err instanceof Error ? err.message : "Failed to load chat sessions.");
     } finally {
-      setLoadingThreads(false);
+      setLoadingSessions(false);
     }
   }
 
@@ -106,7 +108,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   }
 
   useEffect(() => {
-    void refreshThreads();
+    void refreshChatSessions();
   }, [project.id]);
 
   useEffect(() => {
@@ -114,37 +116,40 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
   }, [project.id]);
 
   useEffect(() => {
-    if (selectedThreadId) {
-      void refreshMessages(selectedThreadId);
+    if (selectedSession?.thread_id) {
+      void refreshMessages(selectedSession.thread_id);
     } else {
       setMessages([]);
     }
-  }, [selectedThreadId]);
+  }, [selectedSession]);
 
-  async function handleCreateThread(event: FormEvent<HTMLFormElement>) {
+  async function handleCreateChatSession(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!threadTitle.trim()) {
-      setError("Thread title is required.");
+    if (!sessionTitle.trim()) {
+      setError("Session title is required.");
       return;
     }
 
     try {
-      setSubmittingThread(true);
+      setSubmittingSession(true);
       setError(null);
-      const thread = await createThread(project.id, { title: threadTitle.trim() });
-      setThreadTitle("");
-      await refreshThreads(thread.id);
+      const session = await createChatSession(project.id, {
+        title: sessionTitle.trim(),
+        session_type: "group_chat",
+      });
+      setSessionTitle("");
+      await refreshChatSessions(session.id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create thread.");
+      setError(err instanceof Error ? err.message : "Failed to create chat session.");
     } finally {
-      setSubmittingThread(false);
+      setSubmittingSession(false);
     }
   }
 
   async function handleCreateMessage(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!selectedThreadId) {
-      setError("Create a thread before sending a message.");
+      setError("Create a chat session before sending a message.");
       return;
     }
 
@@ -221,7 +226,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
   async function handleRunCoWork() {
     if (!selectedThreadId) {
-      setError("Select a thread before running CoWork.");
+      setError("Select a chat session before running CoWork.");
       return;
     }
 
@@ -258,41 +263,41 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
       <section className="workspace-grid workspace-grid-wide">
         <aside className="panel sidebar stack-gap">
           <div className="panel-header">
-            <h2>Threads</h2>
-            <span>{threads.length} total</span>
+            <h2>Chat Sessions</h2>
+            <span>{chatSessions.length} total</span>
           </div>
 
-          <form className="stack-gap compact-form" onSubmit={handleCreateThread}>
+          <form className="stack-gap compact-form" onSubmit={handleCreateChatSession}>
             <label className="field">
-              <span>New thread</span>
+              <span>New session</span>
               <input
-                value={threadTitle}
-                onChange={(event) => setThreadTitle(event.target.value)}
-                placeholder="Initial planning thread"
+                value={sessionTitle}
+                onChange={(event) => setSessionTitle(event.target.value)}
+                placeholder="Initial planning window"
               />
             </label>
 
-            <button className="secondary-button" disabled={submittingThread} type="submit">
-              {submittingThread ? "Creating..." : "Create Thread"}
+            <button className="secondary-button" disabled={submittingSession} type="submit">
+              {submittingSession ? "Creating..." : "Create Session"}
             </button>
           </form>
 
           <div className="thread-list">
-            {loadingThreads ? <p className="empty-state">Loading threads...</p> : null}
+            {loadingSessions ? <p className="empty-state">Loading chat sessions...</p> : null}
 
-            {!loadingThreads && threads.length === 0 ? (
-              <p className="empty-state">No threads yet.</p>
+            {!loadingSessions && chatSessions.length === 0 ? (
+              <p className="empty-state">No chat sessions yet.</p>
             ) : null}
 
-            {threads.map((thread) => (
+            {chatSessions.map((session) => (
               <button
-                className={thread.id === selectedThreadId ? "thread-item active" : "thread-item"}
-                key={thread.id}
-                onClick={() => setSelectedThreadId(thread.id)}
+                className={session.id === selectedSessionId ? "thread-item active" : "thread-item"}
+                key={session.id}
+                onClick={() => setSelectedSessionId(session.id)}
                 type="button"
               >
-                <strong>{thread.title}</strong>
-                <span>{thread.status}</span>
+                <strong>{session.title}</strong>
+                <span>{session.session_type}</span>
               </button>
             ))}
           </div>
@@ -300,8 +305,8 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
         <section className="panel conversation stack-gap">
           <div className="panel-header">
-            <h2>{selectedThread?.title ?? "Group Chat"}</h2>
-            <span>{selectedThread ? selectedThread.status : "No thread selected"}</span>
+            <h2>{selectedSession?.title ?? "Group Chat"}</h2>
+            <span>{selectedSession ? selectedSession.status : "No session selected"}</span>
           </div>
 
           <div className="inline-actions">
@@ -310,7 +315,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
             </span>
             <button
               className="secondary-button"
-              disabled={!selectedThread || runningCoWork}
+              disabled={!selectedSession || runningCoWork}
               onClick={() => void handleRunCoWork()}
               type="button"
             >
@@ -325,11 +330,11 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
           <div className="message-stream">
             {loadingMessages ? <p className="empty-state">Loading messages...</p> : null}
 
-            {!loadingMessages && !selectedThread ? (
-              <p className="empty-state">Create or select a thread to begin.</p>
+            {!loadingMessages && !selectedSession ? (
+              <p className="empty-state">Create or select a chat session to begin.</p>
             ) : null}
 
-            {!loadingMessages && selectedThread && messages.length === 0 ? (
+            {!loadingMessages && selectedSession && messages.length === 0 ? (
               <p className="empty-state">No messages yet. Send the first goal.</p>
             ) : null}
 
@@ -348,9 +353,9 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
             <label className="field">
               <span>Message</span>
               <textarea
-                disabled={!selectedThread}
+                disabled={!selectedSession}
                 onChange={(event) => setMessageDraft(event.target.value)}
-                placeholder="Describe the next goal or request for this thread"
+                placeholder="Describe the next goal or instruction for this chat session"
                 rows={5}
                 value={messageDraft}
               />
@@ -358,7 +363,7 @@ export function WorkspaceClient({ project }: WorkspaceClientProps) {
 
             <button
               className="primary-button"
-              disabled={!selectedThread || submittingMessage}
+              disabled={!selectedSession || submittingMessage}
               type="submit"
             >
               {submittingMessage ? "Sending..." : "Send Message"}

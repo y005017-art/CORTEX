@@ -56,6 +56,10 @@ class Project(Base):
         back_populates="project",
         cascade="all, delete-orphan"
     )
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan"
+    )
     messages: Mapped[list["Message"]] = relationship(
         back_populates="project",
         cascade="all, delete-orphan"
@@ -80,11 +84,28 @@ class Thread(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
 
     project: Mapped[Project] = relationship(back_populates="threads")
+    chat_sessions: Mapped[list["ChatSession"]] = relationship(back_populates="thread")
     messages: Mapped[list["Message"]] = relationship(
         back_populates="thread",
         cascade="all, delete-orphan"
     )
     decisions: Mapped[list["Decision"]] = relationship(back_populates="thread")
+
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), nullable=False, index=True)
+    thread_id: Mapped[str] = mapped_column(ForeignKey("threads.id"), nullable=False, unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(160), nullable=False)
+    session_type: Mapped[str] = mapped_column(String(32), default="group_chat")
+    role_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    created_at: Mapped[datetime] = mapped_column(DateTime(), default=datetime.utcnow)
+
+    project: Mapped[Project] = relationship(back_populates="chat_sessions")
+    thread: Mapped[Thread] = relationship(back_populates="chat_sessions")
 
 
 class Role(Base):

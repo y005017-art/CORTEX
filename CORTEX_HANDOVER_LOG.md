@@ -653,3 +653,52 @@ Do not overwrite previous entries unless they are factually incorrect.
   - `WARN` paths are not yet modeled as a distinct runtime branch
 - Next recommended step:
   - Wire live OpenAI execution behind the adapter boundary under the new policy precheck path, or start converting policy decisions from hard-coded logic into rule-driven evaluation inputs
+
+## Session Entry
+
+- Date: 2026-06-24
+- Session focus: Chat window/session abstraction model
+- Current phase: Phase 1 / CORTEX Core MVP
+- Completed:
+  - Added a first-class `chat_sessions` backend model to represent user-facing chat windows separately from raw thread persistence
+  - Added chat session repository, service methods, and protected API routes
+  - Added a schema migration for `chat_sessions`
+  - Wired chat session creation to provision an underlying structured message thread automatically
+  - Updated the workspace UI to use `Chat Sessions` as the primary left-rail object instead of exposing raw threads directly
+- In progress:
+  - CORTEX now distinguishes the user-facing work window from the event-stream thread that stores machine-actionable messages
+- Blockers:
+  - None for this slice
+- Decisions made:
+  - Keep `thread` as the structured event stream carrier under the hood
+  - Make `chat_session` the primary user-facing workspace container for the multi-window platform direction
+  - Limit this slice to session abstraction only and not yet expand into full message protocol upgrades or role session orchestration
+- Files created:
+  - `apps/api/app/repositories/chat_sessions.py`
+  - `apps/api/app/api/routes/chat_sessions.py`
+  - `apps/api/alembic/versions/20260624_01_chat_sessions.py`
+- Files updated:
+  - `apps/api/app/models.py`
+  - `apps/api/app/services/workspace.py`
+  - `apps/api/app/schemas.py`
+  - `apps/api/app/main.py`
+  - `apps/api/README.md`
+  - `apps/web/lib/api.ts`
+  - `apps/web/components/workspace-client.tsx`
+  - `CORTEX_HANDOVER_LOG.md`
+- Tests run:
+  - `py -m compileall app`
+  - `npm run build`
+  - `alembic upgrade head`
+  - Local deploy verification at `http://127.0.0.1:8000/health`
+  - Local deploy verification at `http://127.0.0.1:3000`
+  - API verification that `POST /projects/{project_id}/chat-sessions` creates a session plus backing thread
+  - API verification that `GET /projects/{project_id}/chat-sessions` lists sessions
+  - API verification that `GET /chat-sessions/{session_id}` loads the session
+  - API verification that messages still persist and load through the backing thread
+- Known risks:
+  - Legacy threads created before this migration are not automatically backfilled into chat sessions
+  - Message protocol fields are still carried by `messages` and not yet elevated into a richer protocol contract layer
+  - Role-specific session lifecycle has not yet been introduced
+- Next recommended step:
+  - Implement multi-window message protocol metadata on top of `chat_sessions`, then add role session orchestration on that foundation

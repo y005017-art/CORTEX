@@ -64,6 +64,17 @@ export type Thread = {
   created_at: string;
 };
 
+export type ChatSession = {
+  id: string;
+  project_id: string;
+  thread_id: string;
+  title: string;
+  session_type: string;
+  role_id: string | null;
+  status: string;
+  created_at: string;
+};
+
 export type Message = {
   id: string;
   project_id: string;
@@ -163,6 +174,20 @@ export async function createThread(
   input: { title: string }
 ): Promise<Thread> {
   return request<Thread>(`/projects/${projectId}/threads`, {
+    method: "POST",
+    json: input,
+  });
+}
+
+export async function listChatSessions(projectId: string): Promise<ChatSession[]> {
+  return request<ChatSession[]>(`/projects/${projectId}/chat-sessions`);
+}
+
+export async function createChatSession(
+  projectId: string,
+  input: { title: string; session_type?: string; role_id?: string }
+): Promise<ChatSession> {
+  return request<ChatSession>(`/projects/${projectId}/chat-sessions`, {
     method: "POST",
     json: input,
   });

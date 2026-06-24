@@ -69,6 +69,8 @@ Current memory lifecycle:
 ## CoWork route
 
 - `POST /threads/{thread_id}/cowork-run`
+- `GET /projects/{project_id}/chat-sessions`
+- `POST /projects/{project_id}/chat-sessions`
 
 This v1 route analyzes the latest `user_goal` in the thread, writes a CoWork
 analysis message, and may create a decision proposal plus corresponding thread

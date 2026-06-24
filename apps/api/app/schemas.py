@@ -32,6 +32,25 @@ class ThreadRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ChatSessionCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=160)
+    session_type: str = Field(default="group_chat", min_length=1, max_length=32)
+    role_id: str | None = None
+
+
+class ChatSessionRead(BaseModel):
+    id: str
+    project_id: str
+    thread_id: str
+    title: str
+    session_type: str
+    role_id: str | None
+    status: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class MessageCreate(BaseModel):
     message_type: str = Field(default="user_goal", min_length=1, max_length=32)
     sender_type: str = Field(default="user", min_length=1, max_length=32)
